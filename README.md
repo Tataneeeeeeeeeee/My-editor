@@ -2,13 +2,11 @@
 
 A modern text editor developed in Rust with a graphical interface using GPUI (Zed's framework).
 
-**Version: 1.0.0**
-
-## 📋 Description
+## Description
 
 My-editor is a lightweight and performant text editor built with Rust. It offers a smooth editing experience with syntax highlighting, intuitive navigation, and a responsive user interface.
 
-## ✨ Features
+## Features
 
 - **Complete text editing**: Insertion, deletion, cursor navigation
 - **Syntax highlighting**: Support for multiple languages via Syntect
@@ -27,7 +25,7 @@ My-editor is a lightweight and performant text editor built with Rust. It offers
   - Auto-scroll to follow the cursor
 - **UTF-8 support**: Full Unicode character handling
 
-## 🛠️ Technologies
+## Technologies
 
 - **Rust** (2024 Edition)
 - **GPUI**: Modern UI framework from Zed
@@ -35,7 +33,7 @@ My-editor is a lightweight and performant text editor built with Rust. It offers
 - **Cosmic Text**: Advanced text rendering
 - **RFD**: Native file dialogs
 
-## 📦 Installation
+## Installation
 
 ### Prerequisites
 
@@ -60,7 +58,7 @@ cargo build --release
 cargo run --release
 ```
 
-## 🚀 Usage
+## Usage
 
 ### Launch
 
@@ -83,7 +81,7 @@ cargo run
   - File menu → "Open": Open a file
   - File menu → "Save": Save the document
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 src/
@@ -101,7 +99,7 @@ src/
     └── window_render.rs             # Window rendering
 ```
 
-## 🧩 Architecture
+## Architecture
 
 The project is organized into distinct modules:
 
@@ -112,7 +110,7 @@ The project is organized into distinct modules:
 - **MenuBar**: Menu bar with actions (Open, Save)
 - **AppState**: Global application state
 
-## 🔧 Development
+## Development
 
 ### Debug build
 

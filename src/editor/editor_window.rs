@@ -18,6 +18,7 @@ pub struct EditorTab {
     pub buffer: TextBuffer,
     pub title: String,
     pub focus_handle: FocusHandle,
+    pub is_modified: bool,
 }
 
 impl EditorTab {
@@ -26,6 +27,7 @@ impl EditorTab {
             buffer: TextBuffer::new(),
             title,
             focus_handle,
+            is_modified: false,
         }
     }
 }
@@ -223,6 +225,7 @@ impl Render for EditorWindow {
                 if let Some(s) = &event.keystroke.key_char {
                     if let Some(ch) = s.chars().next() {
                         buffer.insert_char(ch);
+                        active_tab.is_modified = true;
                         cx.notify();
                         return;
                     }
@@ -363,7 +366,53 @@ impl Render for EditorWindow {
                         .child(
                             div()
                                 .text_color(if is_act { rgb(0xffffff) } else { rgb(0x969696) })
-                                .child(name)
+                                .child(name),
+                        )
+                        .child(
+                            if is_act && !active_tab.is_modified {
+                                div()
+                                    .id(("close-tab", tab_idx)) // Unique ID because hover needs to target this specific close button
+                                    .ml_2()
+                                    .w(px(16.0))
+                                    .h(px(16.0))
+                                    .flex()
+                                    .items_center()
+                                    .justify_center()
+                                    .rounded(px(4.0))
+                                    .text_color(rgb(0xcccccc))
+                                    .hover(|style| 
+                                        style.bg(rgb(0x454545))
+                                            .text_color(rgb(0xffffff))
+                                    )
+                                    .on_mouse_down(MouseButton::Left, cx.listener(move |this, _event: &MouseDownEvent, _window, cx| {
+                                        this.close_tab(tab_idx, cx);
+                                    }))
+                                    .child("✖")
+                            } else if is_act && active_tab.is_modified {
+                                div()
+                                    .id(("close-tab", tab_idx))
+                                    .ml_2()
+                                    .w(px(16.0))
+                                    .h(px(16.0))
+                                    .flex()
+                                    .items_center()
+                                    .justify_center()
+                                    .rounded(px(4.0))
+                                    .text_color(rgb(0xff5555))
+                                    .hover(|style| 
+                                        style.bg(rgb(0x454545))
+                                            .text_color(rgb(0xffffff))
+                                    )
+                                    .on_mouse_down(MouseButton::Left, cx.listener(move |this, _event: &MouseDownEvent, _window, cx| {
+                                        this.close_tab(tab_idx, cx);
+                                    }))
+                                    .child("✖")
+                            } else {
+                                div()
+                                    .id(("close-tab", tab_idx))
+                                    .w(px(16.0))
+                                    .h(px(16.0)) // Placeholder for alignment
+                            }
                         )
                 })
             );
