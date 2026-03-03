@@ -43,7 +43,7 @@ impl EditorElement {
             scroll_y,
             viewport_height,
             syntax_highlighter: SyntaxHighlighter::new(),
-            file_extension: "rs".to_string(), // Par défaut Rust
+            file_extension: "rs".to_string(), // Default: Rust
         }
     }
     
@@ -52,16 +52,16 @@ impl EditorElement {
         self
     }
 
-    // Calculer les lignes visibles en fonction du scroll
+    // Calculate visible lines based on scroll position
     fn get_visible_line_range(&self) -> (usize, usize) {
         const LINE_HEIGHT: f32 = 19.2;
-        const BUFFER_LINES: usize = 5; // Lignes de buffer au-dessus et en-dessous
+        const BUFFER_LINES: usize = 5; // Buffer lines above and below
         
         let first_visible = (self.scroll_y / LINE_HEIGHT).floor() as usize;
         let visible_count = (self.viewport_height / LINE_HEIGHT).ceil() as usize;
         let last_visible = first_visible + visible_count;
         
-        // Ajouter un buffer pour le rendu anticipé
+        // Add buffer for anticipatory rendering
         let start = first_visible.saturating_sub(BUFFER_LINES);
         let end = (last_visible + BUFFER_LINES).min(self.line_count);
         
@@ -83,7 +83,7 @@ impl EditorElement {
             .flex_col()
             .relative()
             .child(
-                // Spacer pour décaler les numéros selon le scroll
+                // Spacer to offset line numbers according to scroll
                 div()
                     .h(px(start_line as f32 * LINE_HEIGHT))
             )
@@ -99,7 +99,7 @@ impl EditorElement {
         const LINE_HEIGHT: f32 = 19.2;
         const CHAR_SPACING: f32 = 0.5;
         
-        // Diviser le texte en lignes
+        // Split text into lines
         let mut lines: Vec<String> = Vec::new();
         
         if self.text.is_empty() {
@@ -117,27 +117,27 @@ impl EditorElement {
             lines.push(current_line);
         }
         
-        // Configurer le highlighter
+        // Configure highlighter
         let syntax = self.syntax_highlighter.get_syntax(&self.file_extension);
         
         let mut highlighter = self.syntax_highlighter.create_highlighter(syntax);
         
-        // Ne rendre que les lignes visibles
+        // Only render visible lines
         let (start_line, end_line) = self.get_visible_line_range();
         
-        // Highlighter TOUTES les lignes pour maintenir l'état correct
-        // mais ne garder que les lignes visibles pour le rendu
+        // Highlight ALL lines to maintain correct state
+        // but only keep visible lines for rendering
         let mut visible_lines_with_highlighting = Vec::new();
         
         for (idx, line) in lines.iter().enumerate() {
             let styled_segments = if line.is_empty() {
                 vec![]
             } else {
-                // Ajouter un \n à la fin de la ligne pour syntect
+                // Add a \n at the end of the line for syntect
                 let line_with_newline = format!("{}\n", line);
                 let mut segments = self.syntax_highlighter.highlight_line(&line_with_newline, syntax, &mut highlighter);
                 
-                // Retirer le \n du dernier segment
+                // Remove the \n from the last segment
                 if let Some(last_segment) = segments.last_mut() {
                     if last_segment.1.ends_with('\n') {
                         last_segment.1.pop();
@@ -147,7 +147,7 @@ impl EditorElement {
                 segments
             };
             
-            // Ne garder que les lignes dans la plage visible
+            // Only keep lines in visible range
             if idx >= start_line && idx < end_line {
                 visible_lines_with_highlighting.push(styled_segments);
             }
@@ -160,7 +160,7 @@ impl EditorElement {
             .flex()
             .flex_col()
             .child(
-                // Spacer pour décaler le contenu selon le scroll
+                // Spacer to offset content according to scroll
                 div()
                     .h(px(start_line as f32 * LINE_HEIGHT))
             )
@@ -173,11 +173,11 @@ impl EditorElement {
                         .font_family("monospace")
                         .children(
                             if styled_segments.is_empty() {
-                                // Ligne vide
+                                // Empty line
                                 vec![div().child(" ")]
                             } else {
-                                // Rendre chaque segment avec sa couleur
-                                // MAIS on divise chaque segment en caractères individuels pour l'espacement
+                                // Render each segment with its color
+                                // BUT we split each segment into individual characters for spacing
                                 styled_segments.into_iter().flat_map(|(style, text)| {
                                     let color = syntect_color_to_gpui(style);
                                     text.chars().map(move |c| {
@@ -213,7 +213,7 @@ impl EditorElement {
         
         let cursor_y = line_index as f32 * LINE_HEIGHT;
         
-        // Rendre chaque caractère individuellement avec l'espacement pour aligner le curseur
+        // Render each character individually with spacing to align cursor
         div()
             .absolute()
             .left_0()
@@ -276,20 +276,20 @@ impl EditorElement {
     fn render_editor_content(&self) -> impl IntoElement {
         div()
             .id("scrollable-container")
-            .h_full() // Utiliser toute la hauteur disponible
-            .overflow_hidden() // Crucial: empêcher le débordement
+            .h_full() // Use all available height
+            .overflow_hidden() // Crucial: prevent overflow
             .bg(rgb(0x1e1e1e))
             .flex()
             .flex_row()
             .child(
-                // Zone d'édition principale - positionnement absolu pour empêcher le débordement
+                // Main editing area - absolute positioning to prevent overflow
                 div()
                     .flex_1()
-                    .h_full() // Forcer la hauteur à 100%
-                    .overflow_hidden() // Empêcher le débordement
-                    .relative() // Conteneur de référence pour le positionnement absolu
+                    .h_full() // Force height to 100%
+                    .overflow_hidden() // Prevent overflow
+                    .relative() // Reference container for absolute positioning
                     .child(
-                        // Contenu scrollable en position absolue
+                        // Scrollable content in absolute position
                         div()
                             .absolute()
                             .left_0()
@@ -302,7 +302,7 @@ impl EditorElement {
                     )
             )
             .child(
-                // Barre de défilement à droite
+                // Scrollbar on the right
                 self.render_scrollbar()
             )
     }
@@ -365,20 +365,20 @@ impl IntoElement for EditorElement
             .font_family("monospace")
             .flex()
             .flex_col()
-            .overflow_hidden() // Empêcher le débordement du conteneur principal
+            .overflow_hidden() // Prevent overflow of main container
             .child(
-                // Zone d'édition avec hauteur flexible mais strictement limitée
+                // Editing area with flexible but strictly limited height
                 div()
                     .flex_1()
-                    .min_h_0() // Important: permet au flex_1 de rétrécir
-                    .overflow_hidden() // Empêcher le débordement
+                    .min_h_0() // Important: allows flex_1 to shrink
+                    .overflow_hidden() // Prevent overflow
                     .child(self.render_editor_content())
             )
             .child(
-                // Barre de statut fixe en bas - hauteur fixe
+                // Fixed status bar at bottom - fixed height
                 div()
-                    .flex_shrink_0() // Ne jamais rétrécir
-                    .h(px(60.0)) // Hauteur fixe pour la barre de statut
+                    .flex_shrink_0() // Never shrink
+                    .h(px(60.0)) // Fixed height for status bar
                     .px_4()
                     .py_2()
                     .child(self.render_status_bar())
@@ -386,9 +386,9 @@ impl IntoElement for EditorElement
     }
 }
 
-// Convertir une couleur syntect en couleur gpui
+// Convert a syntect color to gpui color
 fn syntect_color_to_gpui(style: SyntectStyle) -> Rgba {
-    // Convertir les composantes RGB (0-255) en format 0xRRGGBB
+    // Convert RGB components (0-255) to 0xRRGGBB format
     let r = style.foreground.r as u32;
     let g = style.foreground.g as u32;
     let b = style.foreground.b as u32;

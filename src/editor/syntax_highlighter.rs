@@ -26,15 +26,15 @@ impl SyntaxHighlighter {
     }
     
     pub fn highlight_line(&self, line: &str, _syntax: &SyntaxReference, highlighter: &mut HighlightLines) -> Vec<(Style, String)> {
-        // highlight_line retourne déjà les segments colorisés
-        // Il faut juste passer la ligne et le syntax_set
+        // highlight_line already returns colorized segments
+        // Just need to pass the line and the syntax_set
         match highlighter.highlight_line(line, &self.syntax_set) {
             Ok(segments) => segments
                 .into_iter()
                 .map(|(style, text)| (style, text.to_string()))
                 .collect(),
             Err(_) => {
-                // En cas d'erreur, retourner la ligne entière sans coloration
+                // In case of error, return the entire line without coloring
                 vec![(Style::default(), line.to_string())]
             }
         }

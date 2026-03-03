@@ -1,5 +1,5 @@
-/// Module centralisé pour la gestion du buffer de texte
-/// Contient toute la logique d'édition, de navigation et de calcul de position du curseur
+/// Centralized module for text buffer management
+/// Contains all editing, navigation and cursor position calculation logic
 
 use std::path::PathBuf;
 
@@ -41,17 +41,17 @@ impl TextBuffer {
     //     buffer
     // }
 
-    /// Insertion d'un caractère à la position du curseur
+    /// Insert a character at cursor position
     pub fn insert_char(&mut self, ch: char) {
         self.text.insert(self.cursor, ch);
         self.cursor += ch.len_utf8();
         self.update_stats();
     }
 
-    /// Suppression du caractère avant le curseur (backspace)
+    /// Delete the character before the cursor (backspace)
     pub fn backspace(&mut self) {
         if self.cursor > 0 {
-            // Trouver la limite de caractère précédente
+            // Find the previous character boundary
             let mut new_cursor = self.cursor - 1;
             while new_cursor > 0 && !self.text.is_char_boundary(new_cursor) {
                 new_cursor -= 1;
@@ -63,7 +63,7 @@ impl TextBuffer {
         }
     }
 
-    /// Insertion d'une tabulation (4 espaces)
+    /// Insert a tab (4 spaces)
     pub fn insert_tab(&mut self) {
         for _ in 0..4 {
             self.text.insert(self.cursor, ' ');
@@ -72,7 +72,7 @@ impl TextBuffer {
         self.update_stats();
     }
 
-    /// Déplacement du curseur vers la gauche
+    /// Move cursor left
     pub fn move_left(&mut self) {
         if self.cursor > 0 {
             let text_before = &self.text[..self.cursor];
@@ -83,7 +83,7 @@ impl TextBuffer {
         }
     }
 
-    /// Déplacement du curseur vers la droite
+    /// Move cursor right
     pub fn move_right(&mut self) {
         if self.cursor < self.text.len() {
             let text_after = &self.text[self.cursor..];
@@ -94,18 +94,18 @@ impl TextBuffer {
         }
     }
 
-    /// Déplacement du curseur vers le haut
+    /// Move cursor up
     pub fn move_up(&mut self) {
         let safe_cursor = self.get_safe_cursor();
         let text_before_cursor = &self.text[..safe_cursor];
         
-        // Trouver le début de la ligne actuelle
+        // Find the start of the current line
         if let Some(current_line_start) = text_before_cursor.rfind('\n') {
             let current_line_start = current_line_start + 1;
             let current_line_text = &self.text[current_line_start..safe_cursor];
             let col_in_chars = current_line_text.chars().count();
             
-            // Trouver le début de la ligne précédente
+            // Find the start of the previous line
             if let Some(prev_line_start) = self.text[..current_line_start.saturating_sub(1)].rfind('\n') {
                 let prev_line_start = prev_line_start + 1;
                 let prev_line_end = current_line_start - 1;
@@ -118,7 +118,7 @@ impl TextBuffer {
                 
                 self.cursor = prev_line_start + new_pos;
             } else if current_line_start > 0 {
-                // Première ligne du fichier
+                // First line of the file
                 let first_line = &self.text[..current_line_start.saturating_sub(1)];
                 let new_pos = first_line.chars()
                     .take(col_in_chars)
@@ -130,7 +130,7 @@ impl TextBuffer {
         }
     }
 
-    /// Déplacement du curseur vers le bas
+    /// Move cursor down
     pub fn move_down(&mut self) {
         let safe_cursor = self.get_safe_cursor();
         let text_before_cursor = &self.text[..safe_cursor];
@@ -139,7 +139,7 @@ impl TextBuffer {
         let current_line_text = &self.text[current_line_start..safe_cursor];
         let col_in_chars = current_line_text.chars().count();
         
-        // Trouver la fin de la ligne actuelle
+        // Find the end of the current line
         if let Some(next_line_offset) = self.text[safe_cursor..].find('\n') {
             let next_line_start = safe_cursor + next_line_offset + 1;
             
@@ -160,7 +160,7 @@ impl TextBuffer {
         }
     }
 
-    /// Positionner le curseur à partir d'un clic (ligne, colonne en caractères)
+    /// Position cursor from a click (line, column in characters)
     pub fn set_cursor_from_position(&mut self, line: usize, col: usize) {
         let lines: Vec<&str> = self.text.lines().collect();
         
@@ -173,10 +173,10 @@ impl TextBuffer {
         let target_line = line.min(self.line_count).saturating_sub(1);
         let mut position = 0;
         
-        // Calculer la position en octets jusqu'au début de la ligne cible
+        // Calculate byte position up to the start of target line
         for i in 0..target_line {
             if i < lines.len() {
-                position += lines[i].len() + 1; // +1 pour le \n
+                position += lines[i].len() + 1; // +1 for the \n
             }
         }
         
@@ -185,7 +185,7 @@ impl TextBuffer {
             let char_count = line_text.chars().count();
             let target_col = col.min(char_count);
             
-            // Convertir la position en caractères vers une position en octets
+            // Convert character position to byte position
             let byte_offset = line_text.chars()
                 .take(target_col)
                 .map(|c| c.len_utf8())
@@ -198,11 +198,11 @@ impl TextBuffer {
         self.update_stats();
     }
 
-    /// Mettre à jour les statistiques du buffer (nombre de lignes, position du curseur)
+    /// Update buffer statistics (line count, cursor position)
     pub fn update_stats(&mut self) {
         let safe_cursor = self.get_safe_cursor();
         
-        // Calculer le nombre de lignes
+        // Calculate line count
         let lines: Vec<&str> = self.text.lines().collect();
         let mut line_count = if self.text.is_empty() { 1 } else { lines.len().max(1) };
         line_count = match self.text.chars().last() {
@@ -210,7 +210,7 @@ impl TextBuffer {
             _ => line_count,
         };
         
-        // Calculer la ligne et colonne actuelles
+        // Calculate current line and column
         let text_before_cursor = &self.text[..safe_cursor];
         let mut current_line = if text_before_cursor.is_empty() { 1 } else { text_before_cursor.lines().count() };
         let current_col = text_before_cursor.chars().rev().take_while(|&c| c != '\n').count();
@@ -225,13 +225,13 @@ impl TextBuffer {
         self.cursor = safe_cursor;
     }
 
-    /// Obtenir un curseur valide sur une limite de caractère UTF-8
+    /// Get a valid cursor on a UTF-8 character boundary
     fn get_safe_cursor(&self) -> usize {
         let safe_cursor = self.cursor.min(self.text.len());
         self.ensure_char_boundary(safe_cursor)
     }
 
-    /// Assurer que la position est sur une limite de caractère valide
+    /// Ensure position is on a valid character boundary
     fn ensure_char_boundary(&self, position: usize) -> usize {
         if self.text.is_char_boundary(position) {
             position
@@ -240,28 +240,28 @@ impl TextBuffer {
         }
     }
 
-    /// Auto-scroll pour garder le curseur visible
+    /// Auto-scroll to keep cursor visible
     pub fn auto_scroll_to_cursor(&mut self, viewport_height: f32, line_height: f32) {
         let cursor_y = (self.current_line.saturating_sub(1)) as f32 * line_height;
         
-        // Scroll vers le bas si nécessaire
+        // Scroll down if necessary
         if cursor_y > self.scroll_y + viewport_height - line_height * 2.0 {
             self.scroll_y = cursor_y - viewport_height + line_height * 3.0;
         }
         
-        // Scroll vers le haut si nécessaire
+        // Scroll up if necessary
         if cursor_y < self.scroll_y + line_height {
             self.scroll_y = (cursor_y - line_height).max(0.0);
         }
         
-        // Limiter le scroll
+        // Limit scroll
         self.scroll_y = self.scroll_y.max(0.0);
         let content_height = self.line_count as f32 * line_height;
         let max_scroll = (content_height - viewport_height).max(0.0);
         self.scroll_y = self.scroll_y.min(max_scroll);
     }
 
-    /// Charger du texte depuis un fichier
+    /// Load text from a file
     pub fn load_from_file(&mut self, path: PathBuf, content: String) {
         self.text = content;
         self.file_path = Some(path);
@@ -270,7 +270,7 @@ impl TextBuffer {
         self.update_stats();
     }
 
-    /// Obtenir l'extension du fichier pour la coloration syntaxique
+    /// Get file extension for syntax highlighting
     pub fn get_file_extension(&self) -> String {
         self.file_path
             .as_ref()

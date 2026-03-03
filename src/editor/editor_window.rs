@@ -4,7 +4,7 @@ use super::text_buffer::TextBuffer;
 use super::menu_bar::{MenuBar, MenuAction};
 // use super::text_layout::TextLayout;
 
-// Configuration de l'affichage
+// Display configuration
 const LINE_HEIGHT: f32 = 19.2;
 // const FONT_SIZE: f32 = 16.0;
 const GUTTER_WIDTH: f32 = 50.0;
@@ -13,7 +13,7 @@ const PADDING_LEFT: f32 = 16.0;
 const TOTAL_OFFSET: f32 = GUTTER_WIDTH + GUTTER_MARGIN + PADDING_LEFT;
 const MONOSPACE_CHAR_WIDTH: f32 = 8.0;
 
-/// Représente un onglet d'éditeur avec son contenu
+/// Represents an editor tab with its content
 pub struct EditorTab {
     pub buffer: TextBuffer,
     pub title: String,
@@ -30,7 +30,7 @@ impl EditorTab {
     }
 }
 
-/// Fenêtre principale qui contient plusieurs onglets d'éditeur
+/// Main window containing multiple editor tabs
 pub struct EditorWindow {
     pub tabs: Vec<EditorTab>,
     pub active_tab_index: usize,
@@ -51,7 +51,7 @@ impl EditorWindow {
         }
     }
 
-    /// Ajoute un nouvel onglet
+    /// Adds a new tab
     pub fn add_tab(&mut self, title: String, cx: &mut Context<Self>) {
         let new_focus = cx.focus_handle();
         let new_tab = EditorTab::new(self.next_tab_id, title, new_focus);
@@ -62,7 +62,7 @@ impl EditorWindow {
         cx.notify();
     }
 
-    /// Ferme un onglet par index
+    /// Closes a tab by index
     pub fn close_tab(&mut self, index: usize, cx: &mut Context<Self>) {
         if self.tabs.len() > 1 && index < self.tabs.len() {
             self.tabs.remove(index);
@@ -73,7 +73,7 @@ impl EditorWindow {
         }
     }
 
-    /// Change l'onglet actif
+    /// Changes the active tab
     pub fn set_active_tab(&mut self, index: usize, cx: &mut Context<Self>) {
         if index < self.tabs.len() {
             self.active_tab_index = index;
@@ -81,7 +81,7 @@ impl EditorWindow {
         }
     }
 
-    /// Gère les actions du menu
+    /// Handles menu actions
     pub fn handle_menu_action(&mut self, action: MenuAction, cx: &mut Context<Self>) {
         self.menu_bar.file_menu_open = false;
         
@@ -98,7 +98,7 @@ impl EditorWindow {
         }
     }
 
-    /// Ouvre un fichier avec un dialogue de sélection
+    /// Opens a file with a file selection dialog
     fn open_file(&mut self, cx: &mut Context<Self>) {
         if let Some(file_path) = rfd::FileDialog::new()
             .add_filter("Text Files", &["txt", "rs", "toml", "json", "md"])
@@ -130,7 +130,7 @@ impl EditorWindow {
         }
     }
 
-    /// Sauvegarde le fichier actif
+    /// Saves the active file
     fn save_file(&mut self, cx: &mut Context<Self>) {
         let active_tab = &mut self.tabs[self.active_tab_index];
         
@@ -148,7 +148,7 @@ impl EditorWindow {
         }
     }
 
-    /// Sauvegarde le fichier avec un dialogue "Save As"
+    /// Saves the file with a "Save As" dialog
     fn save_file_as(&mut self, cx: &mut Context<Self>) {
         let active_tab = &mut self.tabs[self.active_tab_index];
         
@@ -185,7 +185,7 @@ impl Render for EditorWindow {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         use super::editor_element::EditorElement;
         
-        // Collecter les informations des tabs
+        // Collect tab information
         let tabs_info: Vec<(usize, String, bool)> = self.tabs.iter().enumerate()
             .map(|(index, tab)| (index, tab.title.clone(), index == self.active_tab_index))
             .collect();
@@ -195,13 +195,13 @@ impl Render for EditorWindow {
         
         let on_key = cx.listener(
             |this: &mut Self, event: &KeyDownEvent, _window, cx| {
-                // Ctrl+T pour nouveau tab
+                // Ctrl+T for new tab
                 if event.keystroke.modifiers.control && event.keystroke.key == "t" {
                     this.add_tab("Untitled".to_string(), cx);
                     return;
                 }
                 
-                // Ctrl+W pour fermer le tab actif
+                // Ctrl+W to close active tab
                 if event.keystroke.modifiers.control && event.keystroke.key == "w" {
                     if this.tabs.len() > 1 {
                         this.close_tab(this.active_tab_index, cx);
@@ -209,7 +209,7 @@ impl Render for EditorWindow {
                     return;
                 }
 
-                // Ctrl+Tab pour changer de tab
+                // Ctrl+Tab to switch tabs
                 if event.keystroke.modifiers.control && event.keystroke.key == "tab" {
                     let next_index = (this.active_tab_index + 1) % this.tabs.len();
                     this.set_active_tab(next_index, cx);
@@ -219,7 +219,7 @@ impl Render for EditorWindow {
                 let active_tab = &mut this.tabs[this.active_tab_index];
                 let buffer = &mut active_tab.buffer;
                 
-                // Gestion des caractères
+                // Character handling
                 if let Some(s) = &event.keystroke.key_char {
                     if let Some(ch) = s.chars().next() {
                         buffer.insert_char(ch);
@@ -228,7 +228,7 @@ impl Render for EditorWindow {
                     }
                 }
         
-                // Gestion des touches spéciales
+                // Special key handling
                 match event.keystroke.key.as_str() {
                     "backspace" => buffer.backspace(),
                     "enter" => {
@@ -259,7 +259,7 @@ impl Render for EditorWindow {
                 let x: f32 = event.position.x.into();
                 let y: f32 = event.position.y.into();
                 
-                // Ignorer les clics dans la zone des menus/onglets
+                // Ignore clicks in menu/tab area
                 if y < (MENU_BAR_HEIGHT + TAB_BAR_HEIGHT) {
                     return;
                 }
@@ -270,7 +270,7 @@ impl Render for EditorWindow {
                 let active_tab = &mut this.tabs[this.active_tab_index];
                 let buffer = &mut active_tab.buffer;
                 
-                // Gestion du clic sur la scrollbar
+                // Handle scrollbar click
                 if x >= scrollbar_x {
                     const STATUS_BAR_HEIGHT: f32 = 60.0;
                     let viewport_height = 600.0 - TAB_BAR_HEIGHT - STATUS_BAR_HEIGHT;
@@ -286,7 +286,7 @@ impl Render for EditorWindow {
                     return;
                 }
                 
-                // Positionnement du curseur par clic
+                // Cursor positioning by click
                 let adjusted_y = y + buffer.scroll_y - TOP_PADDING;
                 let line_index = (adjusted_y / LINE_HEIGHT).max(1.0) as usize;
                 let click_offset = x - TOTAL_OFFSET;
@@ -315,7 +315,7 @@ impl Render for EditorWindow {
             },
         );
 
-        // Calculer la hauteur de la viewport
+        // Calculate viewport height
         let viewport_height: f32 = _window.viewport_size().height.into();
         let viewport_height = viewport_height - 60.0;
 
@@ -330,7 +330,7 @@ impl Render for EditorWindow {
             viewport_height,
         ).with_file_extension(file_extension);
 
-        // Barre d'onglets
+        // Tab bar
         let tabs_bar = div()
             .h(px(40.0))
             .bg(rgb(0x252526))
@@ -344,7 +344,7 @@ impl Render for EditorWindow {
 
                     let mut name = format!("{}", title);
                     if tabs_info.iter().filter(|(_, t, _)| t == title).count() > 1 {
-                        // Si plusieurs onglets ont le même titre, ajouter un suffixe pour les différencier
+                        // If multiple tabs have the same title, add a suffix to differentiate
                         let suffix = format!(" ({})", tab_idx + 1);
                         name.push_str(&suffix);
                     }
@@ -368,7 +368,7 @@ impl Render for EditorWindow {
                 })
             );
 
-        // Barre de menu
+        // Menu bar
         let file_menu_open = self.menu_bar.file_menu_open;
         let menu_bar_element = self.menu_bar.render(file_menu_open, cx);
         

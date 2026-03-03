@@ -1,7 +1,7 @@
 // use cosmic_text::{Attrs, Buffer, Family, FontSystem, Metrics, Shaping};
 // use std::sync::{Arc, Mutex};
 
-// /// Gestionnaire de mesure de texte utilisant cosmic-text
+// /// Text measurement manager using cosmic-text
 // pub struct TextLayout {
 //     font_system: Arc<Mutex<FontSystem>>,
 //     font_size: f32,
@@ -17,13 +17,13 @@
 //         }
 //     }
 
-//     /// Mesure la largeur en pixels d'un texte jusqu'à une position donnée (en caractères)
+//     /// Measures the pixel width of text up to a given position (in characters)
 //     pub fn measure_text_to_column(&self, text: &str, column: usize) -> f32 {
 //         if text.is_empty() || column == 0 {
 //             return 0.0;
 //         }
 
-//         // Prendre seulement le texte jusqu'à la colonne
+//         // Take only the text up to the column
 //         let text_slice: String = text.chars().take(column).collect();
         
 //         let mut font_system = self.font_system.lock().unwrap();
@@ -40,7 +40,7 @@
         
 //         buffer.shape_until_scroll(&mut *font_system, false);
 
-//         // Calculer la largeur totale en additionnant les largeurs des glyphes
+//         // Calculate total width by adding glyph widths
 //         let mut width = 0.0;
 //         for run in buffer.layout_runs() {
 //             for glyph in run.glyphs.iter() {
@@ -51,34 +51,34 @@
 //         width
 //     }
 
-//     /// Trouve la colonne (position en caractères) correspondant à une position X en pixels
-//     /// Utilise une approche simple pour les polices monospace
+//     /// Finds the column (character position) corresponding to an X position in pixels
+//     /// Uses a simple approach for monospace fonts
 //     pub fn column_from_x(&self, text: &str, x: f32) -> usize {
 //         if text.is_empty() || x <= 0.0 {
 //             return 0;
 //         }
 
-//         // Pour une police monospace, on estime la largeur moyenne par caractère
-//         // en mesurant la largeur totale du texte
+//         // For a monospace font, we estimate the average width per character
+//         // by measuring the total width of the text
 //         let char_count = text.chars().count();
 //         if char_count == 0 {
 //             return 0;
 //         }
 
-//         // Mesurer la largeur totale du texte
+//         // Measure total text width
 //         let total_width = self.measure_text_to_column(text, char_count);
         
 //         if total_width <= 0.0 {
-//             // Si on ne peut pas mesurer, utiliser une approximation
-//             // Pour monospace 16px, chaque caractère fait environ 9.6px
+//             // If we can't measure, use an approximation
+//             // For 16px monospace, each character is approximately 9.6px
 //             let approx_char_width = 9.6;
 //             return (x / approx_char_width).round().min(char_count as f32) as usize;
 //         }
         
-//         // Calculer la largeur moyenne par caractère
+//         // Calculate average character width
 //         let avg_char_width = total_width / char_count as f32;
         
-//         // Trouver la colonne en testant chaque position
+//         // Find column by testing each position
 //         let mut best_col = 0;
 //         let mut min_distance = f32::MAX;
         
@@ -90,7 +90,7 @@
 //                 min_distance = distance;
 //                 best_col = col;
 //             } else {
-//                 // Si la distance augmente, on a trouvé le minimum
+//                 // If distance increases, we found the minimum
 //                 break;
 //             }
 //         }
@@ -98,7 +98,7 @@
 //         best_col
 //     }
 
-//     /// Mesure la largeur totale d'une ligne de texte
+//     /// Measures the total width of a line of text
 //     pub fn measure_text_width(&self, text: &str) -> f32 {
 //         self.measure_text_to_column(text, text.chars().count())
 //     }
