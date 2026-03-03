@@ -1,0 +1,13 @@
+[package]
+name = "my_editor_rust_2"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+
+gpui = { git = "https://github.com/zed-industries/zed" }
+gpui-component = "0.5.1"
+rfd = "0.15"
+cosmic-text = "0.12"
+syntect = "5.2"
+
