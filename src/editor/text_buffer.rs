@@ -27,20 +27,6 @@ impl TextBuffer {
         }
     }
 
-    // pub fn from_text(text: String) -> Self {
-    //     let mut buffer = Self {
-    //         text,
-    //         cursor: 0,
-    //         line_count: 1,
-    //         current_line: 1,
-    //         current_col: 0,
-    //         scroll_y: 0.0,
-    //         file_path: None,
-    //     };
-    //     buffer.update_stats();
-    //     buffer
-    // }
-
     /// Insert a character at cursor position
     pub fn insert_char(&mut self, ch: char) {
         self.text.insert(self.cursor, ch);
