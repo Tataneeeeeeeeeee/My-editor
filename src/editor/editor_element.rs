@@ -90,7 +90,7 @@ impl EditorElement {
             .children(
                 (start_line..end_line).map(|i| {
                     div()
-                        .child(format!("{:>4}", i + 1))
+                        .child(format!("{:>4} ", i + 1))
                 })
             )
     }

@@ -18,7 +18,7 @@ impl MenuBar {
         }
     }
 
-    pub fn render(&self, _file_menu_open: bool, cx: &mut Context<crate::editor::editor_window::EditorWindow>) -> impl IntoElement {
+    pub fn render(&self, _file_menu_open: bool, cx: &mut Context<crate::editor::editor_window::EditorWindow>) -> impl IntoElement + use<> {
         div()
             .h(px(30.0))
             .w_full()

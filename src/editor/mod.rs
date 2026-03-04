@@ -5,3 +5,4 @@ pub mod syntax_highlighter;
 pub mod text_buffer;
 pub mod key;
 pub mod tab_bar;
+pub mod tool_bar;

@@ -10,4 +10,4 @@ gpui-component = "0.5.1"
 rfd = "0.15"
 cosmic-text = "0.12"
 syntect = "5.2"
-
+anyhow = "1.0.102"
