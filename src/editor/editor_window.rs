@@ -51,6 +51,8 @@ pub struct EditorWindow {
     pub explorer_open: bool,
     pub explorer_icon: std::collections::HashMap<String, Arc<Path>>,
     pub pending_creation: Option<PendingCreation>,
+    /// Keeps the window-activation subscription alive for the lifetime of the view.
+    _activation_subscription: Option<Subscription>,
 }
 
 impl EditorWindow {
@@ -63,7 +65,7 @@ impl EditorWindow {
 
         let mut explorer_icon = std::collections::HashMap::new();
         explorer_icon.insert("explorer".to_string(), icon("explorer.png"));
-        
+
         Self {
             tabs: vec![first_tab],
             active_tab_index: 0,
@@ -73,6 +75,7 @@ impl EditorWindow {
             explorer_open: true,
             explorer_icon,
             pending_creation: None,
+            _activation_subscription: None,
         }
     }
 
@@ -331,6 +334,18 @@ impl EditorWindow {
 
 impl Render for EditorWindow {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        // Register the window-activation observer once (requires &mut Window, only available here)
+        if self._activation_subscription.is_none() {
+            self._activation_subscription = Some(
+                cx.observe_window_activation(_window, |this, window, cx| {
+                    if window.is_window_active() {
+                        this.file_tree.refresh();
+                        cx.notify();
+                    }
+                })
+            );
+        }
+
         use super::editor_element::EditorElement;
 
         let on_key = cx.listener(|this, event: &KeyDownEvent, window, cx| {

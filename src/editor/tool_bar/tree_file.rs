@@ -258,8 +258,9 @@ pub fn render_file_tree(
         )
         .child(
             div()
+                .id("file-tree-scroll")
                 .flex_1()
-                .overflow_hidden()
+                .overflow_y_scroll()
                 .flex()
                 .flex_col()
                 // Inline input row (shown while creating a file/folder)
