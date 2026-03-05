@@ -1,7 +1,8 @@
 use gpui::*;
+use gpui::prelude::FluentBuilder;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use crate::editor::editor_window::EditorWindow;
+use crate::editor::editor_window::{EditorWindow, PendingCreation, PendingCreationKind};
 
 #[derive(Clone, Debug)]
 pub struct FileNode {
@@ -91,7 +92,9 @@ pub struct FileTree {
     pub root: Option<FileNode>,
     pub root_path: PathBuf,
     pub file_icons: std::collections::HashMap<String, Arc<Path>>,
+    pub explorer_icon: std::collections::HashMap<String, Arc<Path>>,
     pub dir_icon: Arc<Path>,
+    pub last_selected: PathBuf,
 }
 
 impl FileTree {
@@ -115,12 +118,18 @@ impl FileTree {
         file_icons.insert("lock".into(), icon("lock_logo.png"));
         file_icons.insert("py".into(), icon("python_logo.png"));
 
+        let mut explorer_icon: std::collections::HashMap<String, Arc<Path>> = std::collections::HashMap::new();
+        explorer_icon.insert("new_document".to_string(), icon("new-document.png"));
+        explorer_icon.insert("new_folder".to_string(), icon("new-folder.png"));
+
         let dir_icon: Arc<Path> = Arc::from(assets_dir.join("directory_logo.png").as_path());
 
         Self {
             root: Some(root),
+            last_selected: root_path.clone(),
             root_path,
             file_icons,
+            explorer_icon,
             dir_icon,
         }
     }
@@ -145,6 +154,14 @@ impl FileTree {
             None => vec![],
         }
     }
+
+    /// Reload the tree from disk (keeping expanded state where possible)
+    pub fn refresh(&mut self) {
+        let mut root = FileNode::from_path(self.root_path.clone(), 0);
+        root.is_expanded = true;
+        root.load_children();
+        self.root = Some(root);
+    }
 }
 
 fn toggle_in_node(node: &mut FileNode, target: &PathBuf) {
@@ -159,6 +176,7 @@ fn toggle_in_node(node: &mut FileNode, target: &PathBuf) {
 
 pub fn render_file_tree(
     file_tree: &FileTree,
+    pending_creation: Option<&PendingCreation>,
     cx: &mut Context<EditorWindow>,
 ) -> impl IntoElement + use<> {
     let flat = file_tree.flatten();
@@ -169,6 +187,10 @@ pub fn render_file_tree(
         .unwrap_or("EXPLORER")
         .to_string()
         .to_uppercase();
+
+    // Snapshot of the inline input to render (avoids borrow issues)
+    let input_row: Option<(String, PendingCreationKind)> = pending_creation
+        .map(|pc| (pc.input.clone(), pc.kind.clone()));
 
     div()
         .w(px(240.0))
@@ -186,7 +208,53 @@ pub fn render_file_tree(
                 .text_color(rgb(0xbbbbbb))
                 .text_size(px(11.0))
                 .font_weight(FontWeight::BOLD)
-                .child(root_name),
+                .child(
+                    div()
+                        .id("explorer-header")
+                        .flex()
+                        .items_center()
+                        .justify_between()
+                        .child(
+                            div()
+                                .text_size(px(14.0))
+                                .text_color(rgb(0x888888))
+                                .child(root_name)
+                        )
+                        .child(
+                            div()
+                                .flex()
+                                .items_center()
+                                .gap(px(4.0))
+                                .child(
+                                    img(file_tree.explorer_icon.get("new_document").unwrap().clone())
+                                        .size(px(16.0))
+                                        .id("new-file-btn")
+                                        .cursor_pointer()
+                                        .rounded(px(4.0))
+                                        .hover(|s| s.bg(rgb(0x454545)))
+                                        .on_mouse_down(
+                                            MouseButton::Left,
+                                            cx.listener(|this, _: &MouseDownEvent, _window, cx| {
+                                                this.start_create_file(cx);
+                                            }),
+                                        )
+                                )
+                                .child(
+                                    img(file_tree.explorer_icon.get("new_folder").unwrap().clone())
+                                        .size(px(16.0))
+                                        .id("new-folder-btn")
+                                        .cursor_pointer()
+                                        .rounded(px(4.0))
+                                        .hover(|s| s.bg(rgb(0x454545)))
+                                        .on_mouse_down(
+                                            MouseButton::Left,
+                                            cx.listener(|this, _: &MouseDownEvent, _window, cx| {
+                                                this.start_create_folder(cx);
+                                            }),
+                                        )
+                                )
+                        )
+                )
         )
         .child(
             div()
@@ -194,27 +262,63 @@ pub fn render_file_tree(
                 .overflow_hidden()
                 .flex()
                 .flex_col()
+                // Inline input row (shown while creating a file/folder)
+                .when_some(input_row, |el, (current_input, kind)| {
+                    let label = if kind == PendingCreationKind::File {
+                        "New file name:"
+                    } else {
+                        "New folder name:"
+                    };
+                    let display = format!("{}_", current_input); // fake cursor (todo on an other issue)
+                    el.child(
+                        div()
+                            .px(px(8.0))
+                            .py(px(4.0))
+                            .flex()
+                            .flex_col()
+                            .gap(px(2.0))
+                            .bg(rgb(0x2a2d2e))
+                            .border_b_1()
+                            .border_color(rgb(0xFFB126))
+                            .child(
+                                div()
+                                    .text_size(px(10.0))
+                                    .text_color(rgb(0xffffff))
+                                    .child(label)
+                            )
+                            .child(
+                                div()
+                                    .px(px(6.0))
+                                    .py(px(2.0))
+                                    .bg(rgb(0x3c3c3c))
+                                    .border_1()
+                                    .border_color(rgb(0xFFB126))
+                                    .rounded(px(3.0))
+                                    .text_size(px(13.0))
+                                    .text_color(rgb(0xffffff))
+                                    .font_family("monospace")
+                                    .child(display)
+                            )
+                            .child(
+                                div()
+                                    .text_size(px(10.0))
+                                    .text_color(rgb(0xffffff))
+                                    .child("Enter ✓  Esc ✗")
+                            )
+                            .mb_1()
+                    )
+                })
+                // File tree rows
                 .children(flat.into_iter().map(|node| {
                     let path = node.path.clone();
                     let indent = node.depth as f32 * 12.0 + 8.0;
-
                     let ext = node.name.rsplit('.').next().unwrap_or("").to_string();
 
-                    let text_color = if node.is_dir {
-                        rgb(0xcccccc)
-                    } else {
-                        rgb(0xffffff)
-                    };
+                    let text_color = if node.is_dir { rgb(0xcccccc) } else { rgb(0xffffff) };
 
                     let arrow_el: Option<AnyElement> = if node.is_dir {
                         let arrow = if node.is_expanded { "▾" } else { "▸" };
-                        Some(
-                            div()
-                                .text_size(px(13.0))
-                                .text_color(rgb(0x888888))
-                                .child(arrow)
-                                .into_any_element(),
-                        )
+                        Some(div().text_size(px(13.0)).text_color(rgb(0x888888)).child(arrow).into_any_element())
                     } else {
                         None
                     };
@@ -239,17 +343,8 @@ pub fn render_file_tree(
                         .cursor_pointer()
                         .hover(|s| s.bg(rgb(0x2a2d2e)));
 
-                    let row = if let Some(arrow) = arrow_el {
-                        row.child(arrow)
-                    } else {
-                        row
-                    };
-
-                    let row = if let Some(icon) = icon_el {
-                        row.child(icon)
-                    } else {
-                        row
-                    };
+                    let row = if let Some(a) = arrow_el { row.child(a) } else { row };
+                    let row = if let Some(i) = icon_el  { row.child(i) } else { row };
 
                     let row = row.child(
                         div()
@@ -259,19 +354,18 @@ pub fn render_file_tree(
                             .child(node.name.clone()),
                     );
 
-                    row
-                        .id(node_id)
-                        .on_mouse_down(
-                            MouseButton::Left,
-                            cx.listener(move |this, _: &MouseDownEvent, _window, cx| {
-                                if path.is_dir() {
-                                    this.file_tree.toggle_node(&path);
-                                    cx.notify();
-                                } else {
-                                    this.open_file_from_path(path.clone(), cx);
-                                }
-                            }),
-                        )
+                    row.id(node_id).on_mouse_down(
+                        MouseButton::Left,
+                        cx.listener(move |this, _: &MouseDownEvent, _window, cx| {
+                            if path.is_dir() {
+                                this.file_tree.toggle_node(&path);
+                                this.file_tree.last_selected = path.clone();
+                                cx.notify();
+                            } else {
+                                this.open_file_from_path(path.clone(), cx);
+                            }
+                        }),
+                    )
                 })),
         )
 }

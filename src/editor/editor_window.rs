@@ -28,6 +28,19 @@ impl EditorTab {
     }
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub enum PendingCreationKind {
+    File,
+    Folder,
+}
+
+#[derive(Clone, Debug)]
+pub struct PendingCreation {
+    pub kind: PendingCreationKind,
+    pub parent_dir: PathBuf,
+    pub input: String,
+}
+
 /// Main window containing multiple editor tabs
 pub struct EditorWindow {
     pub tabs: Vec<EditorTab>,
@@ -37,6 +50,7 @@ pub struct EditorWindow {
     pub file_tree: FileTree,
     pub explorer_open: bool,
     pub explorer_icon: std::collections::HashMap<String, Arc<Path>>,
+    pub pending_creation: Option<PendingCreation>,
 }
 
 impl EditorWindow {
@@ -49,8 +63,6 @@ impl EditorWindow {
 
         let mut explorer_icon = std::collections::HashMap::new();
         explorer_icon.insert("explorer".to_string(), icon("explorer.png"));
-        explorer_icon.insert("new_document".to_string(), icon("new-document.png"));
-        explorer_icon.insert("new_folder".to_string(), icon("new-folder.png"));
         
         Self {
             tabs: vec![first_tab],
@@ -60,6 +72,7 @@ impl EditorWindow {
             file_tree: FileTree::new(cx),
             explorer_open: true,
             explorer_icon,
+            pending_creation: None,
         }
     }
 
@@ -228,6 +241,92 @@ impl EditorWindow {
             Err(e) => eprintln!("Error reading file: {}", e),
         }
     }
+
+    /// Start creating a new file inside the currently selected/root dir
+    pub fn start_create_file(&mut self, cx: &mut Context<Self>) {
+        let parent_dir = self.get_creation_parent_dir();
+        self.pending_creation = Some(PendingCreation {
+            kind: PendingCreationKind::File,
+            parent_dir,
+            input: String::new(),
+        });
+        cx.notify();
+    }
+
+    /// Start creating a new folder inside the currently selected/root dir
+    pub fn start_create_folder(&mut self, cx: &mut Context<Self>) {
+        let parent_dir = self.get_creation_parent_dir();
+        self.pending_creation = Some(PendingCreation {
+            kind: PendingCreationKind::Folder,
+            parent_dir,
+            input: String::new(),
+        });
+        cx.notify();
+    }
+
+    /// Returns the directory where the new item should be created.
+    /// Uses last_selected if it's a dir, otherwise its parent, fallback to root_path.
+    fn get_creation_parent_dir(&self) -> PathBuf {
+        let last = &self.file_tree.last_selected;
+        if last.is_dir() {
+            last.clone()
+        } else if let Some(parent) = last.parent() {
+            parent.to_path_buf()
+        } else {
+            self.file_tree.root_path.clone()
+        }
+    }
+
+    /// Append a character to the pending creation input
+    pub fn creation_input_push(&mut self, ch: char, cx: &mut Context<Self>) {
+        if let Some(ref mut pc) = self.pending_creation {
+            pc.input.push(ch);
+            cx.notify();
+        }
+    }
+
+    /// Backspace on the pending creation input
+    pub fn creation_input_backspace(&mut self, cx: &mut Context<Self>) {
+        if let Some(ref mut pc) = self.pending_creation {
+            pc.input.pop();
+            cx.notify();
+        }
+    }
+
+    /// Cancel pending creation
+    pub fn cancel_creation(&mut self, cx: &mut Context<Self>) {
+        self.pending_creation = None;
+        cx.notify();
+    }
+
+    /// Confirm pending creation: create the file or folder on disk, refresh tree
+    pub fn confirm_creation(&mut self, cx: &mut Context<Self>) {
+        let Some(pc) = self.pending_creation.take() else { return };
+        let name = pc.input.trim().to_string();
+        if name.is_empty() {
+            cx.notify();
+            return;
+        }
+        let target = pc.parent_dir.join(&name);
+        match pc.kind {
+            PendingCreationKind::File => {
+                if let Err(e) = std::fs::write(&target, "") {
+                    eprintln!("Error creating file: {}", e);
+                } else {
+                    self.file_tree.refresh();
+                    self.open_file_from_path(target, cx);
+                }
+            }
+            PendingCreationKind::Folder => {
+                if let Err(e) = std::fs::create_dir_all(&target) {
+                    eprintln!("Error creating folder: {}", e);
+                } else {
+                    self.file_tree.refresh();
+                }
+            }
+        }
+        cx.notify();
+    }
 }
 
 impl Render for EditorWindow {
@@ -235,9 +334,7 @@ impl Render for EditorWindow {
         use super::editor_element::EditorElement;
 
         let on_key = cx.listener(|this, event: &KeyDownEvent, window, cx| {
-            if !key::shortcuts::handle_ctrl(this, event, cx) {
-                key::input::handle_input(this, event, window, cx);
-            }
+            key::key::handle_key(this, event, window, cx);
         });
 
         let on_mouse_down = cx.listener(|this, event: &MouseDownEvent, _window, cx| {
@@ -341,7 +438,7 @@ impl Render for EditorWindow {
 
         let tabs_bar = tab_bar::bar_element::render_bar(&tabs_info, cx);
         let menu_bar_element = self.menu_bar.render(file_menu_open, cx);
-        let file_tree_element = render_file_tree(&self.file_tree, cx);
+        let file_tree_element = render_file_tree(&self.file_tree, self.pending_creation.as_ref(), cx);
 
         div()
             .size_full()
