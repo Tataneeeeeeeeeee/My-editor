@@ -6,7 +6,8 @@ use super::tab_bar;
 use super::menu_bar;
 use super::key;
 use super::tool_bar::tree_file::{FileTree, render_file_tree};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 /// Represents an editor tab with its content
 pub struct EditorTab {
@@ -35,12 +36,21 @@ pub struct EditorWindow {
     pub menu_bar: MenuBar,
     pub file_tree: FileTree,
     pub explorer_open: bool,
+    pub explorer_icon: std::collections::HashMap<String, Arc<Path>>,
 }
 
 impl EditorWindow {
     pub fn new(_id: usize, title: String, cx: &mut Context<Self>) -> Self {
         let first_focus = cx.focus_handle();
         let first_tab = EditorTab::new(0, title, first_focus);
+
+        let assets_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("assets");
+        let icon = |name: &str| -> Arc<Path> { Arc::from(assets_dir.join(name).as_path()) };
+
+        let mut explorer_icon = std::collections::HashMap::new();
+        explorer_icon.insert("explorer".to_string(), icon("explorer.png"));
+        explorer_icon.insert("new_document".to_string(), icon("new-document.png"));
+        explorer_icon.insert("new_folder".to_string(), icon("new-folder.png"));
         
         Self {
             tabs: vec![first_tab],
@@ -49,6 +59,7 @@ impl EditorWindow {
             menu_bar: MenuBar::new(),
             file_tree: FileTree::new(cx),
             explorer_open: true,
+            explorer_icon,
         }
     }
 
@@ -376,7 +387,13 @@ impl Render for EditorWindow {
                                         div()
                                             .text_size(px(20.0))
                                             .text_color(if explorer_open { rgb(0xffffff) } else { rgb(0x858585) })
-                                            .child("⎗"),
+                                            .child(
+                                                img(self.explorer_icon.get("explorer")
+                                                    .unwrap()
+                                                    .clone()
+                                                )
+                                                .size(px(17.0))
+                                            ),
                                     ),
                             )
                     )
