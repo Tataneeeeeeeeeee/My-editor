@@ -41,7 +41,7 @@ impl FileNode {
         let mut children: Vec<FileNode> = entries
             .filter_map(|e| e.ok())
             .map(|e| FileNode::from_path(e.path(), self.depth + 1))
-            .filter(|n| !n.name.starts_with('.'))
+            .filter(|n| n.name != ".git") // Ignore .git directories
             .collect();
 
         children.sort_by(|a, b| match (a.is_dir, b.is_dir) {
@@ -110,6 +110,10 @@ impl FileTree {
         file_icons.insert("cpp".into(), icon("cpp_logo.png"));
         file_icons.insert("c++".into(), icon("cpp_logo.png"));
         file_icons.insert("cs".into(),  icon("c-sharp_logo.png"));
+        file_icons.insert("txt".into(),  icon("txt_logo.png"));
+        file_icons.insert("md".into(),   icon("markdown_logo.png"));
+        file_icons.insert("lock".into(), icon("lock_logo.png"));
+        file_icons.insert("py".into(), icon("python_logo.png"));
 
         let dir_icon: Arc<Path> = Arc::from(assets_dir.join("directory_logo.png").as_path());
 
@@ -121,15 +125,6 @@ impl FileTree {
         }
     }
 
-    #[allow(dead_code)]
-    pub fn set_root(&mut self, path: PathBuf) {
-        let mut root = FileNode::from_path(path.clone(), 0);
-        root.is_expanded = true;
-        root.load_children();
-        self.root_path = path;
-        self.root = Some(root);
-    }
-
     /// Toggle a node by its path
     pub fn toggle_node(&mut self, path: &PathBuf) {
         if let Some(root) = &mut self.root {
@@ -137,7 +132,6 @@ impl FileTree {
         }
     }
 
-    #[allow(dead_code)]
     pub fn flatten(&self) -> Vec<FlatNode> {
         match &self.root {
             Some(root) => {
