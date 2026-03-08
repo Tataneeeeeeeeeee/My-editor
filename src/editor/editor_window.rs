@@ -8,6 +8,7 @@ use super::key;
 use super::tool_bar::tree_file::{FileTree, render_file_tree};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use crate::settings::settings::get_settings;
 
 /// Represents an editor tab with its content
 pub struct EditorTab {
@@ -48,6 +49,7 @@ pub struct EditorWindow {
     pub next_tab_id: usize,
     pub menu_bar: MenuBar,
     pub file_tree: FileTree,
+    pub root_dir: PathBuf,
     pub explorer_open: bool,
     pub explorer_icon: std::collections::HashMap<String, Arc<Path>>,
     pub pending_creation: Option<PendingCreation>,
@@ -56,11 +58,14 @@ pub struct EditorWindow {
 }
 
 impl EditorWindow {
-    pub fn new(_id: usize, title: String, cx: &mut Context<Self>) -> Self {
+    pub fn new(_id: usize, title: String, root_dir: PathBuf, cx: &mut Context<Self>) -> Self {
         let first_focus = cx.focus_handle();
         let first_tab = EditorTab::new(0, title, first_focus);
 
-        let assets_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("assets");
+        let assets_dir = PathBuf::from(
+            get_settings(vec!["assets", "path"])
+                .expect("Failed to get assets path setting")
+        );
         let icon = |name: &str| -> Arc<Path> { Arc::from(assets_dir.join(name).as_path()) };
 
         let mut explorer_icon = std::collections::HashMap::new();
@@ -71,7 +76,8 @@ impl EditorWindow {
             active_tab_index: 0,
             next_tab_id: 1,
             menu_bar: MenuBar::new(),
-            file_tree: FileTree::new(cx),
+            file_tree: FileTree::new(root_dir.clone(), cx),
+            root_dir,
             explorer_open: true,
             explorer_icon,
             pending_creation: None,

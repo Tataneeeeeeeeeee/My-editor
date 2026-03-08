@@ -8,6 +8,8 @@ pub struct Assets {
 
 impl AssetSource for Assets {
     fn load(&self, path: &str) -> anyhow::Result<Option<Cow<'static, [u8]>>> {
+        println!("Loading asset: {}", self.base.join(path).display());
+
         std::fs::read(self.base.join(path))
             .map(|data| Some(Cow::Owned(data)))
             .map_err(|e| e.into())
