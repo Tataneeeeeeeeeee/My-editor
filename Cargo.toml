@@ -1,5 +1,5 @@
 [package]
-name = "my_editor_rust_2"
+name = "my-editor"
 version = "0.1.0"
 edition = "2024"
 
@@ -11,3 +11,5 @@ rfd = "0.15"
 cosmic-text = "0.12"
 syntect = "5.2"
 anyhow = "1.0.102"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"

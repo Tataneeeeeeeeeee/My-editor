@@ -3,6 +3,7 @@ use gpui::prelude::FluentBuilder;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use crate::editor::editor_window::{EditorWindow, PendingCreation, PendingCreationKind};
+use crate::settings::settings::get_settings;
 
 #[derive(Clone, Debug)]
 pub struct FileNode {
@@ -98,13 +99,16 @@ pub struct FileTree {
 }
 
 impl FileTree {
-    pub fn new(_cx: &mut Context<EditorWindow>) -> Self {
-        let root_path = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+    pub fn new(root_dir: PathBuf, _cx: &mut Context<EditorWindow>) -> Self {
+        let root_path = root_dir;
         let mut root = FileNode::from_path(root_path.clone(), 0);
         root.is_expanded = true;
         root.load_children();
 
-        let assets_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("assets");
+        let assets_dir = PathBuf::from(
+            get_settings(vec!["assets", "path"])
+                .expect("Failed to get assets path setting")
+        );
         let icon = |name: &str| -> Arc<Path> { Arc::from(assets_dir.join(name).as_path()) };
 
         let mut file_icons: std::collections::HashMap<String, Arc<Path>> = std::collections::HashMap::new();
@@ -122,7 +126,7 @@ impl FileTree {
         explorer_icon.insert("new_document".to_string(), icon("new-document.png"));
         explorer_icon.insert("new_folder".to_string(), icon("new-folder.png"));
 
-        let dir_icon: Arc<Path> = Arc::from(assets_dir.join("directory_logo.png").as_path());
+        let dir_icon: Arc<Path> = icon("directory_logo.png");
 
         Self {
             root: Some(root),
