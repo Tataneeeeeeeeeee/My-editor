@@ -42,6 +42,7 @@ pub struct PendingCreation {
     pub input: String,
 }
 
+#[allow(dead_code)]
 /// Main window containing multiple editor tabs
 pub struct EditorWindow {
     pub tabs: Vec<EditorTab>,
