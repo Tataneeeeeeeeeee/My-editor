@@ -1,4 +1,3 @@
-Cargo.lock
 target/
 dist/
 create_release.sh
