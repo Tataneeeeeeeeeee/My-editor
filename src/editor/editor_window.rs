@@ -6,6 +6,8 @@ use super::tab_bar;
 use super::menu_bar;
 use super::key;
 use super::tool_bar::tree_file::{FileTree, render_file_tree};
+use super::tool_bar::search_file::{render_search_files, search_in_files};
+use super::tool_bar::text_input::{TextInputState, TextInputType};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use crate::settings::settings::get_settings;
@@ -52,7 +54,9 @@ pub struct EditorWindow {
     pub file_tree: FileTree,
     pub root_dir: PathBuf,
     pub explorer_open: bool,
-    pub explorer_icon: std::collections::HashMap<String, Arc<Path>>,
+    pub search_open: bool,
+    pub search_input_state: TextInputState,
+    pub menu_icon: std::collections::HashMap<String, Arc<Path>>,
     pub pending_creation: Option<PendingCreation>,
     /// Keeps the window-activation subscription alive for the lifetime of the view.
     _activation_subscription: Option<Subscription>,
@@ -69,8 +73,9 @@ impl EditorWindow {
         );
         let icon = |name: &str| -> Arc<Path> { Arc::from(assets_dir.join(name).as_path()) };
 
-        let mut explorer_icon = std::collections::HashMap::new();
-        explorer_icon.insert("explorer".to_string(), icon("explorer.png"));
+        let mut menu_icon = std::collections::HashMap::new();
+        menu_icon.insert("explorer".to_string(), icon("explorer.png"));
+        menu_icon.insert("search".to_string(), icon("search.png"));
 
         Self {
             tabs: vec![first_tab],
@@ -79,8 +84,10 @@ impl EditorWindow {
             menu_bar: MenuBar::new(),
             file_tree: FileTree::new(root_dir.clone(), cx),
             root_dir,
-            explorer_open: true,
-            explorer_icon,
+            explorer_open: false,
+            search_open: false,
+            search_input_state: TextInputState::new(TextInputType::Search),
+            menu_icon,
             pending_creation: None,
             _activation_subscription: None,
         }
@@ -217,6 +224,32 @@ impl EditorWindow {
     /// Toggle the file explorer panel
     pub fn toggle_explorer(&mut self, cx: &mut Context<Self>) {
         self.explorer_open = !self.explorer_open;
+        self.search_open = false; // Ensure search is closed when opening explorer
+        cx.notify();
+    }
+
+    /// Toggle the file search panel
+    pub fn toggle_search(&mut self, cx: &mut Context<Self>) {
+        self.search_open = !self.search_open;
+        self.explorer_open = false; // Ensure explorer is closed when opening search
+        cx.notify();
+    }
+
+    /// Append a character to the search input
+    pub fn search_input_push(&mut self, ch: char, cx: &mut Context<Self>) {
+        self.search_input_state.push_char(ch);
+        cx.notify();
+    }
+
+    /// Backspace on the search input
+    pub fn search_input_backspace(&mut self, cx: &mut Context<Self>) {
+        self.search_input_state.backspace();
+        cx.notify();
+    }
+
+    /// Clear the search input
+    pub fn search_input_clear(&mut self, cx: &mut Context<Self>) {
+        self.search_input_state.clear();
         cx.notify();
     }
 
@@ -434,11 +467,14 @@ impl Render for EditorWindow {
             this.toggle_explorer(cx);
         });
 
+        let on_toggle_search = cx.listener(|this, _: &MouseDownEvent, _window, cx| {
+            this.toggle_search(cx);
+        });
+
         let dropdown = menu_bar::bar_element::render_dropdown(on_new_file, on_open_file, on_save_file);
 
         let file_menu_open = self.menu_bar.file_menu_open;
         let focus_handle = self.tabs[self.active_tab_index].focus_handle.clone();
-        let explorer_open = self.explorer_open;
 
         let tabs_info: Vec<(usize, String, bool, bool)> = self.tabs.iter().enumerate()
             .map(|(i, tab)| (i, tab.title.clone(), i == self.active_tab_index, tab.is_modified))
@@ -461,6 +497,8 @@ impl Render for EditorWindow {
         let tabs_bar = tab_bar::bar_element::render_bar(&tabs_info, cx);
         let menu_bar_element = self.menu_bar.render(file_menu_open, cx);
         let file_tree_element = render_file_tree(&self.file_tree, self.pending_creation.as_ref(), cx);
+        let search_results = search_in_files(&self.search_input_state.input, &self.root_dir);
+        let search_element = render_search_files(&self.search_input_state, &search_results, cx);
 
         div()
             .size_full()
@@ -499,15 +537,42 @@ impl Render for EditorWindow {
                                     .justify_center()
                                     .rounded(px(6.0))
                                     .cursor_pointer()
-                                    .bg(if explorer_open { rgb(0x505050) } else { rgb(0x333333) })
+                                    .bg(if self.explorer_open { rgb(0x505050) } else { rgb(0x333333) })
                                     .hover(|s| s.bg(rgb(0x454545)))
                                     .on_mouse_down(MouseButton::Left, on_toggle_explorer)
                                     .child(
                                         div()
                                             .text_size(px(20.0))
-                                            .text_color(if explorer_open { rgb(0xffffff) } else { rgb(0x858585) })
+                                            .text_color(if self.explorer_open { rgb(0xffffff) } else { rgb(0x858585) })
                                             .child(
-                                                img(self.explorer_icon.get("explorer")
+                                                img(self.menu_icon.get("explorer")
+                                                    .unwrap()
+                                                    .clone()
+                                                )
+                                                .size(px(17.0))
+                                            ),
+                                    ),
+                            )
+                            // Search icon button
+                            .child(
+                                div()
+                                    .id("btn-search")
+                                    .w(px(36.0))
+                                    .h(px(36.0))
+                                    .flex()
+                                    .items_center()
+                                    .justify_center()
+                                    .rounded(px(6.0))
+                                    .cursor_pointer()
+                                    .bg(if self.search_open { rgb(0x505050) } else { rgb(0x333333) })
+                                    .hover(|s| s.bg(rgb(0x454545)))
+                                    .on_mouse_down(MouseButton::Left, on_toggle_search)
+                                    .child(
+                                        div()
+                                            .text_size(px(20.0))
+                                            .text_color(if self.search_open { rgb(0xffffff) } else { rgb(0x858585) })
+                                            .child(
+                                                img(self.menu_icon.get("search")
                                                     .unwrap()
                                                     .clone()
                                                 )
@@ -516,7 +581,8 @@ impl Render for EditorWindow {
                                     ),
                             )
                     )
-                    .when(explorer_open, |el| el.child(file_tree_element))
+                    .when(self.explorer_open, |el| el.child(file_tree_element))
+                    .when(self.search_open, |el| el.child(search_element))
                     .child(
                         div()
                             .flex_1()
