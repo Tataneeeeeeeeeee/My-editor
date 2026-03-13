@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use crate::editor::editor_window::{EditorWindow, PendingCreation, PendingCreationKind};
 use crate::settings::settings::get_settings;
+use super::text_input::{TextInputState, TextInputType, render_text_input_section};
 
 #[derive(Clone, Debug)]
 pub struct FileNode {
@@ -192,9 +193,17 @@ pub fn render_file_tree(
         .to_string()
         .to_uppercase();
 
-    // Snapshot of the inline input to render (avoids borrow issues)
-    let input_row: Option<(String, PendingCreationKind)> = pending_creation
-        .map(|pc| (pc.input.clone(), pc.kind.clone()));
+    // Convert pending_creation to TextInputState for reusable rendering
+    let input_state: Option<TextInputState> = pending_creation.map(|pc| {
+        let input_type = if pc.kind == PendingCreationKind::File {
+            TextInputType::CreateFile
+        } else {
+            TextInputType::CreateFolder
+        };
+        let mut state = TextInputState::new(input_type);
+        state.input = pc.input.clone();
+        state
+    });
 
     div()
         .w(px(240.0))
@@ -267,51 +276,9 @@ pub fn render_file_tree(
                 .overflow_y_scroll()
                 .flex()
                 .flex_col()
-                // Inline input row (shown while creating a file/folder)
-                .when_some(input_row, |el, (current_input, kind)| {
-                    let label = if kind == PendingCreationKind::File {
-                        "New file name:"
-                    } else {
-                        "New folder name:"
-                    };
-                    let display = format!("{}_", current_input); // fake cursor (todo on an other issue)
-                    el.child(
-                        div()
-                            .px(px(8.0))
-                            .py(px(4.0))
-                            .flex()
-                            .flex_col()
-                            .gap(px(2.0))
-                            .bg(rgb(0x2a2d2e))
-                            .border_b_1()
-                            .border_color(rgb(0xFFB126))
-                            .child(
-                                div()
-                                    .text_size(px(10.0))
-                                    .text_color(rgb(0xffffff))
-                                    .child(label)
-                            )
-                            .child(
-                                div()
-                                    .px(px(6.0))
-                                    .py(px(2.0))
-                                    .bg(rgb(0x3c3c3c))
-                                    .border_1()
-                                    .border_color(rgb(0xFFB126))
-                                    .rounded(px(3.0))
-                                    .text_size(px(13.0))
-                                    .text_color(rgb(0xffffff))
-                                    .font_family("monospace")
-                                    .child(display)
-                            )
-                            .child(
-                                div()
-                                    .text_size(px(10.0))
-                                    .text_color(rgb(0xffffff))
-                                    .child("Enter ✓  Esc ✗")
-                            )
-                            .mb_1()
-                    )
+                // Inline input row using the reusable TextInputState system
+                .when_some(input_state, |el, state| {
+                    el.child(render_text_input_section(&state))
                 })
                 // File tree rows
                 .children(flat.into_iter().map(|node| {

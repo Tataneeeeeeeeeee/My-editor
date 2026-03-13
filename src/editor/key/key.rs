@@ -25,6 +25,23 @@ pub fn handle_key(
         }
         return;
     }
+
+    // If a search input is active, route keys there
+    if this.search_open {
+        match event.keystroke.key.as_str() {
+            "escape" => { this.search_input_clear(cx); return; }
+            "backspace" => { this.search_input_backspace(cx); return; }
+            _ => {}
+        }
+        if let Some(s) = &event.keystroke.key_char {
+            if let Some(ch) = s.chars().next() as Option<char> {
+                this.search_input_push(ch, cx);
+                return;
+            }
+        }
+        return;
+    }
+
     if !key::shortcuts::handle_ctrl(this, event, cx) {
         key::input::handle_input(this, event, window, cx);
     }
