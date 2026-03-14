@@ -10,7 +10,7 @@ use super::tool_bar::search_file::{render_search_files, search_in_files};
 use super::tool_bar::text_input::{TextInputState, TextInputType};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use crate::settings::settings::get_settings;
+use crate::settings::settings::{SettingsGlobal, load_settings};
 
 /// Represents an editor tab with its content
 pub struct EditorTab {
@@ -58,6 +58,7 @@ pub struct EditorWindow {
     pub search_input_state: TextInputState,
     pub menu_icon: std::collections::HashMap<String, Arc<Path>>,
     pub pending_creation: Option<PendingCreation>,
+    
     /// Keeps the window-activation subscription alive for the lifetime of the view.
     _activation_subscription: Option<Subscription>,
 }
@@ -66,9 +67,10 @@ impl EditorWindow {
     pub fn new(_id: usize, title: String, root_dir: PathBuf, cx: &mut Context<Self>) -> Self {
         let first_focus = cx.focus_handle();
         let first_tab = EditorTab::new(0, title, first_focus);
-
+        
+        let settings_global = cx.global::<SettingsGlobal>();
         let assets_dir = PathBuf::from(
-            get_settings(vec!["assets", "path"])
+            settings_global.get(vec!["assets", "path"])
                 .expect("Failed to get assets path setting")
         );
         let icon = |name: &str| -> Arc<Path> { Arc::from(assets_dir.join(name).as_path()) };
@@ -131,6 +133,7 @@ impl EditorWindow {
             MenuAction::NewFile => self.add_tab("Untitled".to_string(), cx),
             MenuAction::OpenFile => self.open_file(cx),
             MenuAction::SaveFile => self.save_current_file(cx),
+            MenuAction::OpenSettings => self.open_settings(cx),
         }
     }
 
@@ -218,6 +221,22 @@ impl EditorWindow {
                     eprintln!("Error saving file: {}", e);
                 }
             }
+        }
+    }
+
+    /// Open Settings file in the editor
+    fn open_settings(&mut self, cx: &mut Context<Self>) {
+        match std::env::var("HOME")
+            .map(|home| PathBuf::from(home).join(".my-editor").join("settings.json"))
+        {
+            Ok(settings_path) => {
+                if settings_path.exists() {
+                    self.open_file_from_path(settings_path, cx);
+                } else {
+                    eprintln!("Settings file not found at expected location: {:?}", settings_path);
+                }
+            }
+            Err(e) => eprintln!("Error determining home directory: {}", e),
         }
     }
 
@@ -377,9 +396,13 @@ impl Render for EditorWindow {
         // Register the window-activation observer once (requires &mut Window, only available here)
         if self._activation_subscription.is_none() {
             self._activation_subscription = Some(
-                cx.observe_window_activation(_window, |this, window, cx| {
-                    if window.is_window_active() {
+                cx.observe_window_activation(_window, |this, _window, cx| {
+                    if _window.is_window_active() {
                         this.file_tree.refresh();
+
+                        let settings_global = load_settings().expect("Failed to load settings");
+                        cx.set_global(settings_global);
+
                         cx.notify();
                     }
                 })
@@ -393,40 +416,42 @@ impl Render for EditorWindow {
         });
 
         let on_mouse_down = cx.listener(|this, event: &MouseDownEvent, _window, cx| {
-            const LINE_HEIGHT: f32 = 19.2;
-            const GUTTER_WIDTH: f32 = 50.0;
-            const GUTTER_MARGIN: f32 = 8.0;
-            const PADDING_LEFT: f32 = 16.0;
-            const TOTAL_OFFSET: f32 = GUTTER_WIDTH + GUTTER_MARGIN + PADDING_LEFT;
-            const MONOSPACE_CHAR_WIDTH: f32 = 8.0;
-            const TAB_BAR_HEIGHT: f32 = 40.0;
-            const MENU_BAR_HEIGHT: f32 = 30.0;
-            const SCROLLBAR_WIDTH: f32 = 14.0;
-            const EXPLORER_WIDTH: f32 = 240.0;
+            let settings_global = cx.global::<SettingsGlobal>().clone();
+            
+            let line_height = settings_global.get_f32(vec!["ui", "editor", "line_height_px"]).unwrap_or(19.2);
+            let gutter_width = settings_global.get_f32(vec!["ui", "panels", "explorer", "width_px"]).unwrap_or(50.0);
+            let gutter_margin = settings_global.get_f32(vec!["ui", "editor", "gutter", "margin_px"]).unwrap_or(8.0);
+            let padding_left = settings_global.get_f32(vec!["ui", "editor", "padding_left_px"]).unwrap_or(16.0);
+            let total_offset = gutter_width + gutter_margin + padding_left;
+            let monospace_char_width = settings_global.get_f32(vec!["ui", "editor", "monospace_char_width_px"]).unwrap_or(8.0);
+            let tab_bar_height = settings_global.get_f32(vec!["ui", "panels", "tab_bar", "height_px"]).unwrap_or(40.0);
+            let menu_bar_height = settings_global.get_f32(vec!["ui", "panels", "menu_bar", "height_px"]).unwrap_or(30.0);
+            let scrollbar_width = settings_global.get_f32(vec!["ui", "editor", "scrollbar", "width_px"]).unwrap_or(14.0);
+            let explorer_width = settings_global.get_f32(vec!["ui", "panels", "explorer", "width_px"]).unwrap_or(240.0);
+            let status_bar_height = settings_global.get_f32(vec!["ui", "panels", "status_bar", "height_px"]).unwrap_or(60.0);
 
             let x: f32 = event.position.x.into();
             let y: f32 = event.position.y.into();
 
-            if y < (MENU_BAR_HEIGHT + TAB_BAR_HEIGHT) {
+            if y < (menu_bar_height + tab_bar_height) {
                 return;
             }
 
             // Ignore clicks inside the explorer panel
-            if this.explorer_open && x < EXPLORER_WIDTH {
+            if this.explorer_open && x < explorer_width {
                 return;
             }
 
-            let editor_x = if this.explorer_open { x - EXPLORER_WIDTH } else { x };
+            let editor_x = if this.explorer_open { x - explorer_width } else { x };
 
             let window_width = 800.0;
             let active_tab = &mut this.tabs[this.active_tab_index];
             let buffer = &mut active_tab.buffer;
 
-            if editor_x >= window_width - SCROLLBAR_WIDTH {
-                const STATUS_BAR_HEIGHT: f32 = 60.0;
-                let viewport_height = 600.0 - TAB_BAR_HEIGHT - STATUS_BAR_HEIGHT;
-                let scrollbar_y = y - MENU_BAR_HEIGHT - TAB_BAR_HEIGHT;
-                let content_height = buffer.line_count as f32 * LINE_HEIGHT;
+            if editor_x >= window_width - scrollbar_width {
+                let viewport_height = 600.0 - tab_bar_height - status_bar_height;
+                let scrollbar_y = y - menu_bar_height - tab_bar_height;
+                let content_height = buffer.line_count as f32 * line_height;
                 let max_scroll = (content_height - viewport_height).max(0.0);
                 let scroll_ratio = scrollbar_y / viewport_height;
                 buffer.scroll_y = (scroll_ratio * max_scroll).max(0.0).min(max_scroll);
@@ -434,21 +459,23 @@ impl Render for EditorWindow {
                 return;
             }
 
-            let top_padding: f32 = 16.0 + TAB_BAR_HEIGHT + 16.0;
+            let top_padding: f32 = padding_left + tab_bar_height + padding_left;
             let adjusted_y = y + buffer.scroll_y - top_padding;
-            let line_index = (adjusted_y / LINE_HEIGHT).max(1.0) as usize;
-            let approximate_col = ((editor_x - TOTAL_OFFSET) / MONOSPACE_CHAR_WIDTH).round() as usize;
+            let line_index = (adjusted_y / line_height).max(1.0) as usize;
+            let approximate_col = ((editor_x - total_offset) / monospace_char_width).round() as usize;
             buffer.set_cursor_from_position(line_index, approximate_col);
             cx.notify();
         });
 
         let on_scroll = cx.listener(|this, event: &ScrollWheelEvent, _window, cx| {
-            const LINE_HEIGHT: f32 = 19.2;
+            let settings_global = cx.global::<SettingsGlobal>().clone();
+            let line_height = settings_global.get_f32(vec!["ui", "editor", "line_height_px"]).unwrap_or(19.2);
+            
             let active_tab = &mut this.tabs[this.active_tab_index];
             let buffer = &mut active_tab.buffer;
             let delta_y: f32 = event.delta.pixel_delta(px(1.0)).y.into();
             buffer.scroll_y = (buffer.scroll_y - delta_y * 2.5).max(0.0);
-            let max_scroll = ((buffer.line_count as f32 * LINE_HEIGHT) - 600.0).max(0.0);
+            let max_scroll = ((buffer.line_count as f32 * line_height) - 600.0).max(0.0);
             buffer.scroll_y = buffer.scroll_y.min(max_scroll);
             cx.notify();
         });
@@ -463,6 +490,11 @@ impl Render for EditorWindow {
             this.handle_menu_action(MenuAction::SaveFile, cx);
         });
 
+        let on_open_settings = cx.listener(|this, _: &MouseDownEvent, _window, cx| {
+            this.handle_menu_action(MenuAction::OpenSettings, cx);
+            this.explorer_open = false;
+        });
+
         let on_toggle_explorer = cx.listener(|this, _: &MouseDownEvent, _window, cx| {
             this.toggle_explorer(cx);
         });
@@ -471,9 +503,10 @@ impl Render for EditorWindow {
             this.toggle_search(cx);
         });
 
-        let dropdown = menu_bar::bar_element::render_dropdown(on_new_file, on_open_file, on_save_file);
+        let settings_global = cx.global::<SettingsGlobal>().clone();
+        let file_dropdown = menu_bar::bar_element::render_file_dropdown(on_new_file, on_open_file, on_save_file, settings_global.clone());
+        let settings_dropdown = menu_bar::bar_element::render_setting_dropdown(on_open_settings, settings_global.clone());
 
-        let file_menu_open = self.menu_bar.file_menu_open;
         let focus_handle = self.tabs[self.active_tab_index].focus_handle.clone();
 
         let tabs_info: Vec<(usize, String, bool, bool)> = self.tabs.iter().enumerate()
@@ -484,6 +517,7 @@ impl Render for EditorWindow {
         let buffer = &mut active_tab.buffer;
 
         let viewport_height: f32 = _window.viewport_size().height.into();
+
         let editor_element = EditorElement::new(
             buffer.text.clone(),
             buffer.cursor,
@@ -492,19 +526,28 @@ impl Render for EditorWindow {
             buffer.current_col,
             buffer.scroll_y,
             viewport_height - 60.0,
+            settings_global,
         ).with_file_extension(buffer.get_file_extension());
 
         let tabs_bar = tab_bar::bar_element::render_bar(&tabs_info, cx);
-        let menu_bar_element = self.menu_bar.render(file_menu_open, cx);
+        let menu_bar_element = self.menu_bar.render(self.menu_bar.file_menu_open, cx);
         let file_tree_element = render_file_tree(&self.file_tree, self.pending_creation.as_ref(), cx);
         let search_results = search_in_files(&self.search_input_state.input, &self.root_dir);
         let search_element = render_search_files(&self.search_input_state, &search_results, cx);
+
+        let settings_global_colors = cx.global::<SettingsGlobal>().clone();
+        let bg_color = settings_global_colors.get_color(vec!["ui", "colors", "background"]).unwrap_or(0x1e1e1e);
+        let toolbar_bg = settings_global_colors.get_color(vec!["ui", "panels", "toolbar", "background"]).unwrap_or(0x333333);
+        let toolbar_active_bg = settings_global_colors.get_color(vec!["ui", "panels", "toolbar", "button_active_background"]).unwrap_or(0x505050);
+        let toolbar_hover_bg = settings_global_colors.get_color(vec!["ui", "panels", "toolbar", "button_hover_background"]).unwrap_or(0x454545);
+        let toolbar_text = settings_global_colors.get_color(vec!["ui", "panels", "toolbar", "button_text"]).unwrap_or(0x858585);
+        let toolbar_active_text = settings_global_colors.get_color(vec!["ui", "panels", "toolbar", "button_active_text"]).unwrap_or(0xffffff);
 
         div()
             .size_full()
             .flex()
             .flex_col()
-            .bg(rgb(0x1e1e1e))
+            .bg(rgb(bg_color))
             .track_focus(&focus_handle)
             .on_key_down(on_key)
             .on_mouse_down(MouseButton::Left, on_mouse_down)
@@ -520,7 +563,7 @@ impl Render for EditorWindow {
                         div()
                             .w(px(48.0))
                             .h_full()
-                            .bg(rgb(0x333333))
+                            .bg(rgb(toolbar_bg))
                             .flex()
                             .flex_col()
                             .items_center()
@@ -537,13 +580,13 @@ impl Render for EditorWindow {
                                     .justify_center()
                                     .rounded(px(6.0))
                                     .cursor_pointer()
-                                    .bg(if self.explorer_open { rgb(0x505050) } else { rgb(0x333333) })
-                                    .hover(|s| s.bg(rgb(0x454545)))
+                                    .bg(if self.explorer_open { rgb(toolbar_active_bg) } else { rgb(toolbar_bg) })
+                                    .hover(|s| s.bg(rgb(toolbar_hover_bg)))
                                     .on_mouse_down(MouseButton::Left, on_toggle_explorer)
                                     .child(
                                         div()
                                             .text_size(px(20.0))
-                                            .text_color(if self.explorer_open { rgb(0xffffff) } else { rgb(0x858585) })
+                                            .text_color(if self.explorer_open { rgb(toolbar_active_text) } else { rgb(toolbar_text) })
                                             .child(
                                                 img(self.menu_icon.get("explorer")
                                                     .unwrap()
@@ -564,13 +607,13 @@ impl Render for EditorWindow {
                                     .justify_center()
                                     .rounded(px(6.0))
                                     .cursor_pointer()
-                                    .bg(if self.search_open { rgb(0x505050) } else { rgb(0x333333) })
-                                    .hover(|s| s.bg(rgb(0x454545)))
+                                    .bg(if self.search_open { rgb(toolbar_active_bg) } else { rgb(toolbar_bg) })
+                                    .hover(|s| s.bg(rgb(toolbar_hover_bg)))
                                     .on_mouse_down(MouseButton::Left, on_toggle_search)
                                     .child(
                                         div()
                                             .text_size(px(20.0))
-                                            .text_color(if self.search_open { rgb(0xffffff) } else { rgb(0x858585) })
+                                            .text_color(if self.search_open { rgb(toolbar_active_text) } else { rgb(toolbar_text) })
                                             .child(
                                                 img(self.menu_icon.get("search")
                                                     .unwrap()
@@ -593,6 +636,7 @@ impl Render for EditorWindow {
                             .child(div().flex_1().min_h_0().child(editor_element))
                     )
             )
-            .when(file_menu_open, |el| el.child(dropdown))
+            .when(self.menu_bar.file_menu_open, |el| el.child(file_dropdown))
+            .when(self.menu_bar.setting_menu_open, |el| el.child(settings_dropdown))
     }
 }

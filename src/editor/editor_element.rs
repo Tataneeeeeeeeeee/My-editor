@@ -1,24 +1,9 @@
 use gpui::*;
-// use super::text_layout::TextLayout;
+
+use crate::settings::settings::SettingsGlobal;
+
 use super::syntax_highlighter::SyntaxHighlighter;
 use syntect::highlighting::Style as SyntectStyle;
-
-
-const EXTENSION_MAP: &[(&str, &str)] = &[
-    ("rs", "Rust"),
-    ("js", "JavaScript"),
-    ("py", "Python"),
-    ("java", "Java"),
-    ("cpp", "C++"),
-    ("c", "C"),
-    ("html", "HTML"),
-    ("css", "CSS"),
-    ("json", "JSON"),
-    ("md", "Markdown"),
-    ("toml", "TOML"),
-    ("txt", "Text"),
-];
-
 
 pub struct EditorElement {
     text: String,
@@ -30,10 +15,11 @@ pub struct EditorElement {
     viewport_height: f32,
     syntax_highlighter: SyntaxHighlighter,
     file_extension: String,
+    settings_global: SettingsGlobal,
 }
 
 impl EditorElement {
-    pub fn new(text: String, cursor: usize, line_count: usize, current_line: usize, current_col: usize, scroll_y: f32, viewport_height: f32) -> Self {
+    pub fn new(text: String, cursor: usize, line_count: usize, current_line: usize, current_col: usize, scroll_y: f32, viewport_height: f32, settings_global: SettingsGlobal) -> Self {
         Self { 
             text,
             cursor,
@@ -44,6 +30,7 @@ impl EditorElement {
             viewport_height,
             syntax_highlighter: SyntaxHighlighter::new(),
             file_extension: "rs".to_string(), // Default: Rust
+            settings_global,
         }
     }
     
@@ -54,11 +41,11 @@ impl EditorElement {
 
     // Calculate visible lines based on scroll position
     fn get_visible_line_range(&self) -> (usize, usize) {
-        const LINE_HEIGHT: f32 = 19.2;
+        let line_height = self.settings_global.get_f32(vec!["ui", "editor", "line_height_px"]).unwrap_or(19.2);
         const BUFFER_LINES: usize = 5; // Buffer lines above and below
         
-        let first_visible = (self.scroll_y / LINE_HEIGHT).floor() as usize;
-        let visible_count = (self.viewport_height / LINE_HEIGHT).ceil() as usize;
+        let first_visible = (self.scroll_y / line_height).floor() as usize;
+        let visible_count = (self.viewport_height / line_height).ceil() as usize;
         let last_visible = first_visible + visible_count;
         
         // Add buffer for anticipatory rendering
@@ -70,10 +57,11 @@ impl EditorElement {
 
     fn render_gutter(&self) -> impl IntoElement {
         let (start_line, end_line) = self.get_visible_line_range();
-        const LINE_HEIGHT: f32 = 19.2;
+        let line_height = self.settings_global.get_f32(vec!["ui", "editor", "line_height_px"]).unwrap_or(19.2);
+        let gutter_text_color = self.settings_global.get_color(vec!["ui", "editor", "gutter", "text_color"]).unwrap_or(0x858585);
         
         div()
-            .text_color(rgb(0x858585))
+            .text_color(rgb(gutter_text_color))
             .mr_2()
             .min_w(px(50.0))
             .text_align(TextAlign::Right)
@@ -85,7 +73,7 @@ impl EditorElement {
             .child(
                 // Spacer to offset line numbers according to scroll
                 div()
-                    .h(px(start_line as f32 * LINE_HEIGHT))
+                    .h(px(start_line as f32 * line_height))
             )
             .children(
                 (start_line..end_line).map(|i| {
@@ -96,8 +84,7 @@ impl EditorElement {
     }
 
     fn render_text_with_cursor(&self) -> impl IntoElement {
-        const LINE_HEIGHT: f32 = 19.2;
-        const CHAR_SPACING: f32 = 0.5;
+        let char_spacing = self.settings_global.get_f32(vec!["ui", "editor", "char_spacing_px"]).unwrap_or(0.5);
         
         // Split text into lines
         let mut lines: Vec<String> = Vec::new();
@@ -162,7 +149,7 @@ impl EditorElement {
             .child(
                 // Spacer to offset content according to scroll
                 div()
-                    .h(px(start_line as f32 * LINE_HEIGHT))
+                    .h(px(start_line as f32 * self.settings_global.get_f32(vec!["ui", "editor", "line_height_px"]).unwrap_or(19.2)))
             )
             .children(
                 visible_lines_with_highlighting.into_iter().map(|styled_segments| {
@@ -182,7 +169,7 @@ impl EditorElement {
                                     let color = syntect_color_to_gpui(style);
                                     text.chars().map(move |c| {
                                         div()
-                                            .pr(px(CHAR_SPACING))
+                                            .pr(px(char_spacing))
                                             .text_color(color)
                                             .child(c.to_string())
                                     }).collect::<Vec<_>>()
@@ -195,8 +182,11 @@ impl EditorElement {
     }
 
     fn render_cursor(&self) -> impl IntoElement {
-        const LINE_HEIGHT: f32 = 19.2;
-        const CHAR_SPACING: f32 = 0.5;
+        let line_height = self.settings_global.get_f32(vec!["ui", "editor", "line_height_px"]).unwrap_or(19.2);
+        let char_spacing = self.settings_global.get_f32(vec!["ui", "editor", "char_spacing_px"]).unwrap_or(0.5);
+        let cursor_color = self.settings_global.get_color(vec!["ui", "editor", "cursor_color"]).unwrap_or(0xffffff);
+        let cursor_opacity = self.settings_global.get_f32(vec!["ui", "editor", "cursor_opacity"]).unwrap_or(0.9);
+        let cursor_width = self.settings_global.get_f32(vec!["ui", "editor", "cursor_width_px"]).unwrap_or(2.0);
         
         let safe_cursor = self.cursor.min(self.text.len());
         let text_before_cursor = &self.text[..safe_cursor];
@@ -211,7 +201,7 @@ impl EditorElement {
             .rev()
             .collect::<String>();
         
-        let cursor_y = line_index as f32 * LINE_HEIGHT;
+        let cursor_y = line_index as f32 * line_height;
         
         // Render each character individually with spacing to align cursor
         div()
@@ -232,27 +222,30 @@ impl EditorElement {
                             .children(
                                 text_on_line.chars().map(|c| {
                                     div()
-                                        .pr(px(CHAR_SPACING))
+                                        .pr(px(char_spacing))
                                         .child(c.to_string())
                                 })
                             )
                     )
                     .child(
                         div()
-                            .w(px(2.0))
-                            .h(px(LINE_HEIGHT))
-                            .bg(rgb(0xffffff))
-                            .opacity(0.9)
+                            .w(px(cursor_width))
+                            .h(px(line_height))
+                            .bg(rgb(cursor_color))
+                            .opacity(cursor_opacity)
                     )
             )
     }
 
     fn render_status_bar(&self) -> impl IntoElement {
+        let text_color = self.settings_global.get_color(vec!["ui", "panels", "status_bar", "text_color"]).unwrap_or(0x858585);
+        let border_color = self.settings_global.get_color(vec!["ui", "panels", "status_bar", "border_color"]).unwrap_or(0x404040);
+        
         div()
-            .text_color(rgb(0x858585))
+            .text_color(rgb(text_color))
             .p_2()
             .border_1()
-            .border_color(rgb(0x404040))
+            .border_color(rgb(border_color))
             .rounded_md()
             .flex()
             .justify_between()
@@ -266,19 +259,21 @@ impl EditorElement {
             )
             .child(
                 div()
-                    .child(EXTENSION_MAP.iter()
-                        .find(|&&(ext, _)| ext == self.file_extension)
-                        .map(|&(_, name)| name)
-                        .unwrap_or("Unknown"))
+                    .child(match self.settings_global.get(vec!["file_extensions", &self.file_extension, "name"]) {
+                        Ok(name) => name,
+                        Err(_) => "Unknown".to_string(),
+                    })
             )
     }
 
     fn render_editor_content(&self) -> impl IntoElement {
+        let bg_color = self.settings_global.get_color(vec!["ui", "editor", "background"]).unwrap_or(0x1e1e1e);
+        
         div()
             .id("scrollable-container")
-            .h_full() // Use all available height
-            .overflow_hidden() // Crucial: prevent overflow
-            .bg(rgb(0x1e1e1e))
+            .h_full()
+            .overflow_hidden()
+            .bg(rgb(bg_color))
             .flex()
             .flex_row()
             .child(
@@ -308,10 +303,14 @@ impl EditorElement {
     }
 
     fn render_scrollbar(&self) -> impl IntoElement {
-        const LINE_HEIGHT: f32 = 19.2;
-        const SCROLLBAR_WIDTH: f32 = 14.0;
+        let line_height = self.settings_global.get_f32(vec!["ui", "editor", "line_height_px"]).unwrap_or(19.2);
+        let scrollbar_width = self.settings_global.get_f32(vec!["ui", "editor", "scrollbar", "width_px"]).unwrap_or(14.0);
+        let scrollbar_bg = self.settings_global.get_color(vec!["ui", "editor", "scrollbar", "background"]).unwrap_or(0x1e1e1e);
+        let scrollbar_track_bg = self.settings_global.get_color(vec!["ui", "colors", "background"]).unwrap_or(0x2d2d30);
+        let thumb_color = self.settings_global.get_color(vec!["ui", "editor", "scrollbar", "thumb_color"]).unwrap_or(0x424242);
+        let thumb_hover_color = self.settings_global.get_color(vec!["ui", "editor", "scrollbar", "thumb_hover_color"]).unwrap_or(0x4f4f4f);
         
-        let content_height = self.line_count as f32 * LINE_HEIGHT;
+        let content_height = self.line_count as f32 * line_height;
         let max_scroll = (content_height - self.viewport_height).max(0.0);
         
         let scrollbar_height = self.viewport_height;
@@ -326,9 +325,9 @@ impl EditorElement {
         let thumb_y = scroll_ratio * (scrollbar_height - thumb_height);
         
         div()
-            .w(px(SCROLLBAR_WIDTH))
+            .w(px(scrollbar_width))
             .h_full()
-            .bg(rgb(0x1e1e1e))
+            .bg(rgb(scrollbar_bg))
             .flex()
             .flex_col()
             .justify_start()
@@ -337,17 +336,17 @@ impl EditorElement {
                     .relative()
                     .w_full()
                     .h_full()
-                    .bg(rgb(0x2d2d30))
+                    .bg(rgb(scrollbar_track_bg))
                     .child(
                         div()
                             .absolute()
                             .left(px(2.0))
                             .top(px(thumb_y))
-                            .w(px(SCROLLBAR_WIDTH - 4.0))
+                            .w(px(scrollbar_width - 4.0))
                             .h(px(thumb_height))
-                            .bg(rgb(0x424242))
+                            .bg(rgb(thumb_color))
                             .rounded(px(4.0))
-                            .hover(|style| style.bg(rgb(0x4f4f4f)))
+                            .hover(|style| style.bg(rgb(thumb_hover_color)))
                     )
             )
     }
