@@ -5,14 +5,15 @@ mod settings;
 
 use crate::window::window_render::AppState;
 use crate::assets::asset::Assets;
-use crate::settings::settings::get_settings;
+use crate::settings::settings::load_settings;
 use gpui::*;
 use std::path::PathBuf;
 use std::env;
 
 fn main() {
+    let settings_global = load_settings().expect("Failed to load settings");
     let assets_dir = PathBuf::from(
-        get_settings(vec!["assets", "path"])
+        settings_global.get(vec!["assets", "path"])
             .expect("Failed to get assets path setting")
     );
     let args: Vec<String> = env::args().collect();
@@ -26,6 +27,9 @@ fn main() {
     Application::new()
         .with_assets(Assets { base: assets_dir })
         .run(move |cx: &mut App| {
+            // Set settings as a global
+            cx.set_global(settings_global.clone());
+            
             cx.set_global(AppState::new());
 
             let _window = cx.update_global::<AppState, _>(|state, cx| {

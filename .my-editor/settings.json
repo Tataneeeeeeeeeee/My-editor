@@ -1,6 +1,403 @@
 {
-    "assets":
-    {
+    // ============================================================================
+    // ASSETS CONFIGURATION - Paths to application resources
+    // ============================================================================
+    "assets": {
+        // Directory containing images and graphic resources
         "path": "/usr/local/share/my-editor/assets/"
+    },
+
+    // ============================================================================
+    // USER INTERFACE - Theme, colors and visual configuration
+    // ============================================================================
+    "ui": {
+        // Application theme (dark, light, etc.)
+        "theme": "dark",
+
+        // ========================================================================
+        // COLORS - Color palette used throughout the application
+        // ========================================================================
+        "colors": {
+            // Main background color of the editor
+            "background": "0x1e1e1e",
+            // Primary text color (main text)
+            "text_primary": "0xffffff",
+            // Secondary text color (comments, metadata)
+            "text_secondary": "0xcccccc",
+            // Disabled/muted text color
+            "text_muted": "0x858585",
+            // Text color on hover
+            "text_hover": "0xffffff",
+            // Main accent color (buttons, selection)
+            "accent": "0x094771",
+            // Orange accent color (alerts, notifications)
+            "accent_orange": "0xFFB126",
+            // Error color (error messages, warnings)
+            "error": "0xff5555",
+            // Color for directory icons
+            "directory": "0xcccccc"
+        },
+
+        // ========================================================================
+        // PANELS - Configuration of various interface panels
+        // ========================================================================
+        "panels": {
+            // ====================================================================
+            // MENU_BAR - Top menu bar configuration
+            // ====================================================================
+            "menu_bar": {
+                // Background color of the menu bar
+                "background": "0x2d2d30",
+                // Height of the menu bar in pixels
+                "height_px": 30,
+                // Border color
+                "border_color": "0x1e1e1e"
+            },
+
+            // ====================================================================
+            // TAB_BAR - Tab bar configuration for open files
+            // ====================================================================
+            "tab_bar": {
+                // Default background color of tabs
+                "background": "0x252526",
+                // Height of the tab bar in pixels
+                "height_px": 40,
+                // Background color of the currently active tab
+                "active_background": "0x1e1e1e",
+                // Background color of inactive tabs
+                "inactive_background": "0x2d2d30",
+                // Text color for the active tab
+                "text_active": "0xffffff",
+                // Text color for inactive tabs
+                "text_inactive": "0x969696",
+                // Border color of the tab bar
+                "border_color": "0x1e1e1e"
+            },
+
+            // ====================================================================
+            // EXPLORER - File explorer panel configuration
+            // ====================================================================
+            "explorer": {
+                // Width of the explorer panel in pixels
+                "width_px": 240,
+                // Background color of the panel
+                "background": "0x252526",
+                // Color of the separation border
+                "border_color": "0x1e1e1e",
+                // Text color of elements (files, folders)
+                "text_color": "0xbbbbbb",
+                // Text color of panel headers
+                "header_text_color": "0x888888",
+                // Background color on hover of elements
+                "hover_background": "0x2a2d2e"
+            },
+
+            // ====================================================================
+            // SEARCH - Search panel configuration
+            // ====================================================================
+            "search": {
+                // Width of the search panel in pixels
+                "width_px": 240,
+                // Background color of the panel
+                "background": "0x252526",
+                // Color of the separation border
+                "border_color": "0x1e1e1e",
+                // Muted text color (help text)
+                "text_muted": "0x555555",
+                // Hint text color (placeholder)
+                "text_hint": "0x888888"
+            },
+
+            // ====================================================================
+            // TOOLBAR - Vertical toolbar configuration
+            // ====================================================================
+            "toolbar": {
+                // Width of the toolbar in pixels
+                "width_px": 48,
+                // Background color of the toolbar
+                "background": "0x333333",
+                // Background color of buttons by default
+                "button_background": "0x333333",
+                // Background color of active/selected buttons
+                "button_active_background": "0x505050",
+                // Background color on hover of buttons
+                "button_hover_background": "0x454545",
+                // Text/icon color of buttons by default
+                "button_text": "0x858585",
+                // Text/icon color of active buttons
+                "button_active_text": "0xffffff"
+            },
+
+            // ====================================================================
+            // STATUS_BAR - Bottom status bar configuration
+            // ====================================================================
+            "status_bar": {
+                // Height of the status bar in pixels
+                "height_px": 60,
+                // Text color of the status bar
+                "text_color": "0x858585",
+                // Top border color
+                "border_color": "0x404040"
+            }
+        },
+
+        // ========================================================================
+        // EDITOR - Text editing area configuration
+        // ========================================================================
+        "editor": {
+            // Background color of the editing area
+            "background": "0x1e1e1e",
+            // Text color in the editor
+            "text_color": "0xffffff",
+            // Cursor (caret) color in the editor
+            "cursor_color": "0xffffff",
+            // Cursor opacity (0.0 to 1.0)
+            "cursor_opacity": 0.9,
+            // Cursor width in pixels
+            "cursor_width_px": 2,
+
+            // Gutter parameters (line numbering)
+            "gutter": {
+                // Text color of line numbers
+                "text_color": "0x858585",
+                // Width of the gutter in pixels
+                "width_px": 50,
+                // Margin between gutter and text in pixels
+                "margin_px": 16
+            },
+
+            // Scrollbar parameters
+            "scrollbar": {
+                // Width of the scrollbar in pixels
+                "width_px": 14,
+                // Background color of the scrollbar
+                "background": "0x1e1e1e",
+                // Color of the scrollbar thumb
+                "thumb_color": "0x424242",
+                // Color of the thumb on hover
+                "thumb_hover_color": "0x4f4f4f",
+                // Minimum height of the thumb in pixels
+                "thumb_min_height_px": 30,
+                // Inner spacing of the scrollbar in pixels
+                "padding_px": 2,
+                // Border radius of the thumb in pixels
+                "border_radius_px": 4
+            },
+
+            // Height of each line of text in pixels
+            "line_height_px": 19.2,
+            // Spacing between characters in pixels
+            "char_spacing_px": 0.5,
+            // Width of a character in monospace font in pixels
+            "monospace_char_width_px": 8.0,
+            // Left spacing of text in pixels
+            "padding_left_px": 16.0,
+            // Font size in pixels
+            "font_size_px": 16,
+            // Font family used (monospace, serif, sans-serif, etc.)
+            "font_family": "monospace",
+            // Syntax highlighting theme (e.g: base16-ocean.dark)
+            "syntax_theme": "base16-ocean.dark"
+        },
+
+        // ========================================================================
+        // INPUT - Text input field configuration
+        // ========================================================================
+        "input": {
+            // Background color of input fields
+            "background": "0x3c3c3c",
+            // Border color of input fields
+            "border_color": "0xFFB126",
+            // Text color in input fields
+            "text_color": "0xffffff",
+            // Font family of input fields
+            "font_family": "monospace",
+            // Font size of input fields in pixels
+            "font_size_px": 13,
+            // Border radius corners in pixels
+            "border_radius_px": 3,
+            // Horizontal inner spacing in pixels
+            "padding_x_px": 6,
+            // Vertical inner spacing in pixels
+            "padding_y_px": 2
+        },
+
+        // ========================================================================
+        // DROPDOWN - Dropdown menu configuration
+        // ========================================================================
+        "dropdown": {
+            // Background color of the dropdown menu
+            "background": "0x252526",
+            // Border color of the dropdown menu
+            "border_color": "0x454545",
+            // Text color in the dropdown menu
+            "text_color": "0xcccccc",
+            // Background color on hover of options
+            "hover_background": "0x094771",
+            // Width of the dropdown menu in pixels
+            "width_px": 200,
+            // Horizontal inner spacing in pixels
+            "padding_x_px": 30,
+            // Vertical inner spacing in pixels
+            "padding_y_px": 8
+        },
+
+        // ========================================================================
+        // HOVER_EFFECTS - Hover effects configuration
+        // ========================================================================
+        "hover_effects": {
+            // Background color on hover of menu elements
+            "menu_hover_background": "0x3e3e42",
+            // Background color on hover of panel elements
+            "panel_hover_background": "0x454545"
+        }
+    },
+
+    // ============================================================================
+    // FILE_EXTENSIONS - Association of file extensions with their icons
+    // ============================================================================
+    "file_extensions": {
+        // Rust files (.rs)
+        "rs": {
+            // Display name for the language
+            "name": "Rust",
+            // Icon file name to display
+            "icon": "rust_logo.png"
+        },
+        // C files (.c)
+        "c": {
+            "name": "C",
+            "icon": "c_logo.png"
+        },
+        // C++ files (.cpp)
+        "cpp": {
+            "name": "C++",
+            "icon": "cpp_logo.png"
+        },
+        // C++ files (.c++)
+        "c++": {
+            "name": "C++",
+            "icon": "cpp_logo.png"
+        },
+        // C# files (.cs)
+        "cs": {
+            "name": "C#",
+            "icon": "c-sharp_logo.png"
+        },
+        // Python files (.py)
+        "py": {
+            "name": "Python",
+            "icon": "python_logo.png"
+        },
+        // JavaScript files (.js)
+        "js": {
+            "name": "JavaScript"
+        },
+        // TypeScript files (.ts)
+        "ts": {
+            "name": "TypeScript"
+        },
+        // Java files (.java)
+        "java": {
+            "name": "Java"
+        },
+        // HTML files (.html)
+        "html": {
+            "name": "HTML"
+        },
+        // CSS files (.css)
+        "css": {
+            "name": "CSS"
+        },
+        // JSON files (.json)
+        "json": {
+            "name": "JSON"
+        },
+        // Markdown files (.md)
+        "md": {
+            "name": "Markdown",
+            "icon": "markdown_logo.png"
+        },
+        // TOML files (.toml)
+        "toml": {
+            "name": "TOML"
+        },
+        // Text files (.txt)
+        "txt": {
+            "name": "Text",
+            "icon": "txt_logo.png"
+        },
+        // Locked files (.lock)
+        "lock": {
+            "name": "Locked File",
+            "icon": "lock_logo.png"
+        }
+    },
+
+    // ============================================================================
+    // ICONS - Configuration of icons used in the interface
+    // ============================================================================
+    "icons": {
+        // Icons available in the explorer panel
+        "explorer_icons": {
+            // Icon for creating a new document
+            "new_document": "new-document.png",
+            // Icon for creating a new folder
+            "new_folder": "new-folder.png"
+        },
+        // Default icons
+        "default": {
+            // Default icon for directories/folders
+            "directory": "directory_logo.png"
+        }
+    },
+
+    // ============================================================================
+    // EDITOR_BEHAVIOR - Editor behavior parameters
+    // ============================================================================
+    "editor_behavior": {
+        // Number of spaces to use for tab indentation
+        "tab_size_spaces": 4,
+        // Automatically scroll the screen to keep the cursor visible
+        "auto_scroll_to_cursor": true,
+        // Enable syntax highlighting of code
+        "syntax_highlighting": true,
+        // Default file extension when creating a new file
+        "default_file_extension": "txt"
+    },
+
+    // ============================================================================
+    // SEARCH - Search functionality configuration parameters
+    // ============================================================================
+    "search": {
+        // Minimum number of characters required to start a search
+        "min_query_length": 4,
+        // Directories to exclude from search results
+        "excluded_directories": [".git", "target"],
+        // Maximum length of a search result preview
+        "max_preview_length": 30
+    },
+
+    // ============================================================================
+    // FILE_DIALOG - File open/close dialog configuration
+    // ============================================================================
+    "file_dialog": {
+        // Filters available in the file dialog
+        "filters": [
+            // Filter for text files
+            {
+                // Filter label
+                "name": "Text Files",
+                // Corresponding extension
+                "extension": "txt"
+            },
+            // Filter for Rust files
+            {
+                "name": "Rust Files",
+                "extension": "rs"
+            }
+        ],
+        // Show a filter to display all file types
+        "show_all_files_filter": true
     }
 }
