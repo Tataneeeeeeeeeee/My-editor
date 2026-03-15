@@ -1,7 +1,15 @@
 [package]
 name = "my-editor"
-version = "0.1.0"
+version = "1.1.0"
 edition = "2024"
+
+[lib]
+name = "my_editor"
+path = "src/lib.rs"
+
+[[bin]]
+name = "my-editor"
+path = "src/main.rs"
 
 [dependencies]
 
@@ -14,3 +22,6 @@ anyhow = "1.0.102"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 json_comments = "0.2"
+
+[dev-dependencies]
+serde_json = "1.0"
