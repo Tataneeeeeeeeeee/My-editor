@@ -6,6 +6,7 @@ pub enum MenuAction {
     // File menu actions
     NewFile,
     OpenFile,
+    OpenFolder,
     SaveFile,
 
     // Settings menu actions

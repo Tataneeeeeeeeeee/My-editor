@@ -5,6 +5,7 @@ use gpui::*;
 pub fn render_file_dropdown(
     on_new_file: impl Fn(&MouseDownEvent, &mut Window, &mut App) + 'static,
     on_open_file: impl Fn(&MouseDownEvent, &mut Window, &mut App) + 'static,
+    on_open_directory: impl Fn(&MouseDownEvent, &mut Window, &mut App) + 'static,
     on_save_file: impl Fn(&MouseDownEvent, &mut Window, &mut App) + 'static,
     settings_global: SettingsGlobal,
 ) -> impl IntoElement {
@@ -59,7 +60,23 @@ pub fn render_file_dropdown(
                         .unwrap_or(0x094771)))
                 })
                 .on_mouse_down(MouseButton::Left, on_open_file)
-                .child("Open File..."),
+                .child("Open File"),
+        )
+        .child(
+            div()
+                .id("open-file-button")
+                .px_4()
+                .py_2()
+                .text_color(rgb(settings_global
+                    .get_color(vec!["ui", "dropdown", "text_color"])
+                    .unwrap_or(0xcccccc)))
+                .hover(|style| {
+                    style.bg(rgb(settings_global
+                        .get_color(vec!["ui", "dropdown", "hover_background"])
+                        .unwrap_or(0x094771)))
+                })
+                .on_mouse_down(MouseButton::Left, on_open_directory)
+                .child("Open Folder"),
         )
         .child(
             div()

@@ -133,6 +133,7 @@ impl EditorWindow {
         match action {
             MenuAction::NewFile => self.add_tab("Untitled".to_string(), cx),
             MenuAction::OpenFile => self.open_file(cx),
+            MenuAction::OpenFolder => self.open_directory(cx),
             MenuAction::SaveFile => self.save_current_file(cx),
             MenuAction::OpenSettings => self.open_settings(cx),
         }
@@ -167,6 +168,24 @@ impl EditorWindow {
                     eprintln!("Error reading file: {}", e);
                 }
             }
+        }
+    }
+
+    /// Opens a directory with a directory selection dialog, then opens it in a new window
+    pub fn open_directory(&mut self, cx: &mut Context<Self>) {
+        if let Some(dir_path) = rfd::FileDialog::new().pick_folder() {
+            // Create a new window with the selected directory instead of forking
+            cx.update_global::<crate::window::window_render::AppState, _>(|state, cx| {
+                state.create_editor_window(
+                    dir_path
+                        .file_name()
+                        .and_then(|n| n.to_str())
+                        .unwrap_or("Untitled")
+                        .to_string(),
+                    cx,
+                    dir_path,
+                )
+            });
         }
     }
 
@@ -520,6 +539,9 @@ impl Render for EditorWindow {
         let on_open_file = cx.listener(|this, _: &MouseDownEvent, _window, cx| {
             this.handle_menu_action(MenuAction::OpenFile, cx);
         });
+        let on_open_directory = cx.listener(|this, _: &MouseDownEvent, _window, cx| {
+            this.handle_menu_action(MenuAction::OpenFolder, cx);
+        });
         let on_save_file = cx.listener(|this, _: &MouseDownEvent, _window, cx| {
             this.handle_menu_action(MenuAction::SaveFile, cx);
         });
@@ -541,6 +563,7 @@ impl Render for EditorWindow {
         let file_dropdown = menu_bar::bar_element::render_file_dropdown(
             on_new_file,
             on_open_file,
+            on_open_directory,
             on_save_file,
             settings_global.clone(),
         );
