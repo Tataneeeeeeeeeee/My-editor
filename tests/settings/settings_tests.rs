@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use serde_json::{json, Value};
+    use serde_json::{Value, json};
 
     // Mock SettingsGlobal pour les tests
     #[derive(Clone)]
@@ -34,7 +34,8 @@ mod tests {
                     return Err(format!("Setting '{}' not found", key));
                 }
             }
-            current_value.as_f64()
+            current_value
+                .as_f64()
                 .ok_or_else(|| "Setting is not a number".to_string())
                 .map(|v| v as f32)
         }
@@ -54,7 +55,7 @@ mod tests {
                 "theme": "dark"
             }
         });
-        
+
         let settings = MockSettingsGlobal::new(settings_json);
         assert!(settings.get(vec!["editor", "theme"]).is_ok());
     }
@@ -66,10 +67,10 @@ mod tests {
                 "theme": "dark"
             }
         });
-        
+
         let settings = MockSettingsGlobal::new(settings_json);
         let result = settings.get(vec!["editor", "theme"]);
-        
+
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "dark");
     }
@@ -81,10 +82,10 @@ mod tests {
                 "font_size": 14.5
             }
         });
-        
+
         let settings = MockSettingsGlobal::new(settings_json);
         let result = settings.get_f32(vec!["editor", "font_size"]);
-        
+
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), 14.5);
     }
@@ -96,10 +97,10 @@ mod tests {
                 "background": "0x1e1e1e"
             }
         });
-        
+
         let settings = MockSettingsGlobal::new(settings_json);
         let result = settings.get_color(vec!["colors", "background"]);
-        
+
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), 0x1e1e1e);
     }
@@ -111,10 +112,10 @@ mod tests {
                 "theme": "dark"
             }
         });
-        
+
         let settings = MockSettingsGlobal::new(settings_json);
         let result = settings.get(vec!["editor", "nonexistent"]);
-        
+
         assert!(result.is_err());
     }
 
@@ -129,10 +130,10 @@ mod tests {
                 }
             }
         });
-        
+
         let settings = MockSettingsGlobal::new(settings_json);
         let result = settings.get_color(vec!["ui", "editor", "colors", "text"]);
-        
+
         assert!(result.is_ok());
     }
 
@@ -143,9 +144,9 @@ mod tests {
             "font_size": 14,
             "auto_save": true
         });
-        
+
         let settings = MockSettingsGlobal::new(settings_json);
-        
+
         assert_eq!(settings.get(vec!["theme"]).unwrap(), "dark");
         assert_eq!(settings.get_f32(vec!["font_size"]).unwrap(), 14.0);
     }
@@ -155,10 +156,10 @@ mod tests {
         let settings_json = json!({
             "color": "0xffffff"
         });
-        
+
         let settings = MockSettingsGlobal::new(settings_json);
         let result = settings.get_color(vec!["color"]);
-        
+
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), 0xffffff);
     }
@@ -168,10 +169,10 @@ mod tests {
         let settings_json = json!({
             "color": "notacolor"
         });
-        
+
         let settings = MockSettingsGlobal::new(settings_json);
         let result = settings.get_color(vec!["color"]);
-        
+
         assert!(result.is_err());
     }
 
@@ -180,15 +181,15 @@ mod tests {
         let settings_json = json!({
             "value": 42
         });
-        
+
         let settings = MockSettingsGlobal::new(settings_json);
         let mut current = settings.settings.clone();
-        
+
         // Empty path iteration should leave current unchanged
         for _ in vec![] as Vec<&str> {
             current = current.clone();
         }
-        
+
         assert!(current.get("value").is_some());
     }
 
@@ -197,10 +198,10 @@ mod tests {
         let settings_json = json!({
             "theme": "light"
         });
-        
+
         let settings = MockSettingsGlobal::new(settings_json);
         let result = settings.get(vec!["theme"]);
-        
+
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "light");
     }
@@ -218,10 +219,10 @@ mod tests {
                 }
             }
         });
-        
+
         let settings = MockSettingsGlobal::new(settings_json);
         let result = settings.get(vec!["a", "b", "c", "d", "e"]);
-        
+
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "deep_value");
     }
@@ -235,13 +236,13 @@ mod tests {
                 "blue": "0x0000FF"
             }
         });
-        
+
         let settings = MockSettingsGlobal::new(settings_json);
-        
+
         let red = settings.get_color(vec!["colors", "red"]).unwrap();
         let green = settings.get_color(vec!["colors", "green"]).unwrap();
         let blue = settings.get_color(vec!["colors", "blue"]).unwrap();
-        
+
         assert_eq!(red, 0xFF0000);
         assert_eq!(green, 0x00FF00);
         assert_eq!(blue, 0x0000FF);
@@ -253,12 +254,12 @@ mod tests {
             "count": 0,
             "opacity": 0.0
         });
-        
+
         let settings = MockSettingsGlobal::new(settings_json);
-        
+
         let count = settings.get_f32(vec!["count"]).unwrap();
         let opacity = settings.get_f32(vec!["opacity"]).unwrap();
-        
+
         assert_eq!(count, 0.0);
         assert_eq!(opacity, 0.0);
     }
@@ -268,10 +269,10 @@ mod tests {
         let settings_json = json!({
             "offset": -10.5
         });
-        
+
         let settings = MockSettingsGlobal::new(settings_json);
         let result = settings.get_f32(vec!["offset"]);
-        
+
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), -10.5);
     }
@@ -281,10 +282,10 @@ mod tests {
         let settings_json = json!({
             "width": 999999.99
         });
-        
+
         let settings = MockSettingsGlobal::new(settings_json);
         let result = settings.get_f32(vec!["width"]);
-        
+
         assert!(result.is_ok());
         assert!(result.unwrap() > 999999.0);
     }
@@ -294,10 +295,10 @@ mod tests {
         let settings_json = json!({
             "value": "string"
         });
-        
+
         let settings = MockSettingsGlobal::new(settings_json);
         let result = settings.get_f32(vec!["value"]);
-        
+
         assert!(result.is_err());
     }
 
@@ -306,10 +307,10 @@ mod tests {
         let settings_json = json!({
             "theme": "dark"
         });
-        
+
         let settings1 = MockSettingsGlobal::new(settings_json);
         let settings2 = settings1.clone();
-        
+
         assert_eq!(
             settings1.get(vec!["theme"]).unwrap(),
             settings2.get(vec!["theme"]).unwrap()
@@ -322,9 +323,9 @@ mod tests {
             "Theme": "dark",
             "theme": "light"
         });
-        
+
         let settings = MockSettingsGlobal::new(settings_json);
-        
+
         let theme_lower = settings.get(vec!["theme"]).unwrap();
         assert_eq!(theme_lower, "light");
     }
@@ -336,10 +337,10 @@ mod tests {
                 "text_color": "0xffffff"
             }
         });
-        
+
         let settings = MockSettingsGlobal::new(settings_json);
         let result = settings.get(vec!["ui-colors", "text_color"]);
-        
+
         assert!(result.is_ok());
     }
 }

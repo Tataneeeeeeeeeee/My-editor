@@ -1,16 +1,16 @@
-use gpui::*;
-use gpui::prelude::FluentBuilder;
-use super::text_buffer::TextBuffer;
-use super::menu_bar::menu_bar::{MenuBar, MenuAction};
-use super::tab_bar;
-use super::menu_bar;
 use super::key;
-use super::tool_bar::tree_file::{FileTree, render_file_tree};
+use super::menu_bar;
+use super::menu_bar::menu_bar::{MenuAction, MenuBar};
+use super::tab_bar;
+use super::text_buffer::TextBuffer;
 use super::tool_bar::search_file::{render_search_files, search_in_files};
 use super::tool_bar::text_input::{TextInputState, TextInputType};
+use super::tool_bar::tree_file::{FileTree, render_file_tree};
+use crate::settings::settings::{SettingsGlobal, load_settings};
+use gpui::prelude::FluentBuilder;
+use gpui::*;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use crate::settings::settings::{SettingsGlobal, load_settings};
 
 /// Represents an editor tab with its content
 pub struct EditorTab {
@@ -58,7 +58,7 @@ pub struct EditorWindow {
     pub search_input_state: TextInputState,
     pub menu_icon: std::collections::HashMap<String, Arc<Path>>,
     pub pending_creation: Option<PendingCreation>,
-    
+
     /// Keeps the window-activation subscription alive for the lifetime of the view.
     _activation_subscription: Option<Subscription>,
 }
@@ -67,11 +67,12 @@ impl EditorWindow {
     pub fn new(_id: usize, title: String, root_dir: PathBuf, cx: &mut Context<Self>) -> Self {
         let first_focus = cx.focus_handle();
         let first_tab = EditorTab::new(0, title, first_focus);
-        
+
         let settings_global = cx.global::<SettingsGlobal>();
         let assets_dir = PathBuf::from(
-            settings_global.get(vec!["assets", "path"])
-                .expect("Failed to get assets path setting")
+            settings_global
+                .get(vec!["assets", "path"])
+                .expect("Failed to get assets path setting"),
         );
         let icon = |name: &str| -> Arc<Path> { Arc::from(assets_dir.join(name).as_path()) };
 
@@ -99,7 +100,7 @@ impl EditorWindow {
     pub fn add_tab(&mut self, title: String, cx: &mut Context<Self>) {
         let new_focus = cx.focus_handle();
         let new_tab = EditorTab::new(self.next_tab_id, title, new_focus);
-        
+
         self.next_tab_id += 1;
         self.tabs.push(new_tab);
         self.active_tab_index = self.tabs.len() - 1;
@@ -151,15 +152,15 @@ impl EditorWindow {
                         .and_then(|n| n.to_str())
                         .unwrap_or("Untitled")
                         .to_string();
-                    
+
                     let new_focus = cx.focus_handle();
                     let mut new_tab = EditorTab::new(self.next_tab_id, file_name, new_focus);
                     new_tab.buffer.load_from_file(file_path, content);
-                    
+
                     self.next_tab_id += 1;
                     self.tabs.push(new_tab);
                     self.active_tab_index = self.tabs.len() - 1;
-                    
+
                     cx.notify();
                 }
                 Err(e) => {
@@ -177,7 +178,7 @@ impl EditorWindow {
     /// Saves the active file
     fn save_file(&mut self, cx: &mut Context<Self>) {
         let active_tab = &mut self.tabs[self.active_tab_index];
-        
+
         if let Some(file_path) = &active_tab.buffer.file_path {
             match std::fs::write(file_path, &active_tab.buffer.text) {
                 Ok(_) => {
@@ -195,7 +196,7 @@ impl EditorWindow {
     /// Saves the file with a "Save As" dialog
     fn save_file_as(&mut self, cx: &mut Context<Self>) {
         let active_tab = &mut self.tabs[self.active_tab_index];
-        
+
         if let Some(file_path) = rfd::FileDialog::new()
             .add_filter("Text Files", &["txt"])
             .add_filter("Rust Files", &["rs"])
@@ -210,10 +211,10 @@ impl EditorWindow {
                         .and_then(|n| n.to_str())
                         .unwrap_or("Untitled")
                         .to_string();
-                    
+
                     active_tab.buffer.file_path = Some(file_path.clone());
                     active_tab.title = file_name;
-                    
+
                     println!("File saved as: {:?}", file_path);
                     cx.notify();
                 }
@@ -233,7 +234,10 @@ impl EditorWindow {
                 if settings_path.exists() {
                     self.open_file_from_path(settings_path, cx);
                 } else {
-                    eprintln!("Settings file not found at expected location: {:?}", settings_path);
+                    eprintln!(
+                        "Settings file not found at expected location: {:?}",
+                        settings_path
+                    );
                 }
             }
             Err(e) => eprintln!("Error determining home directory: {}", e),
@@ -283,9 +287,11 @@ impl EditorWindow {
                     .to_string();
 
                 // If file already open, just switch to it
-                if let Some(idx) = self.tabs.iter().position(|t| {
-                    t.buffer.file_path.as_deref() == Some(&file_path)
-                }) {
+                if let Some(idx) = self
+                    .tabs
+                    .iter()
+                    .position(|t| t.buffer.file_path.as_deref() == Some(&file_path))
+                {
                     self.active_tab_index = idx;
                     cx.notify();
                     return;
@@ -363,7 +369,9 @@ impl EditorWindow {
 
     /// Confirm pending creation: create the file or folder on disk, refresh tree
     pub fn confirm_creation(&mut self, cx: &mut Context<Self>) {
-        let Some(pc) = self.pending_creation.take() else { return };
+        let Some(pc) = self.pending_creation.take() else {
+            return;
+        };
         let name = pc.input.trim().to_string();
         if name.is_empty() {
             cx.notify();
@@ -395,8 +403,8 @@ impl Render for EditorWindow {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         // Register the window-activation observer once (requires &mut Window, only available here)
         if self._activation_subscription.is_none() {
-            self._activation_subscription = Some(
-                cx.observe_window_activation(_window, |this, _window, cx| {
+            self._activation_subscription =
+                Some(cx.observe_window_activation(_window, |this, _window, cx| {
                     if _window.is_window_active() {
                         this.file_tree.refresh();
 
@@ -405,8 +413,7 @@ impl Render for EditorWindow {
 
                         cx.notify();
                     }
-                })
-            );
+                }));
         }
 
         use super::editor_element::EditorElement;
@@ -417,18 +424,38 @@ impl Render for EditorWindow {
 
         let on_mouse_down = cx.listener(|this, event: &MouseDownEvent, _window, cx| {
             let settings_global = cx.global::<SettingsGlobal>().clone();
-            
-            let line_height = settings_global.get_f32(vec!["ui", "editor", "line_height_px"]).unwrap_or(19.2);
-            let gutter_width = settings_global.get_f32(vec!["ui", "panels", "explorer", "width_px"]).unwrap_or(50.0);
-            let gutter_margin = settings_global.get_f32(vec!["ui", "editor", "gutter", "margin_px"]).unwrap_or(8.0);
-            let padding_left = settings_global.get_f32(vec!["ui", "editor", "padding_left_px"]).unwrap_or(16.0);
+
+            let line_height = settings_global
+                .get_f32(vec!["ui", "editor", "line_height_px"])
+                .unwrap_or(19.2);
+            let gutter_width = settings_global
+                .get_f32(vec!["ui", "panels", "explorer", "width_px"])
+                .unwrap_or(50.0);
+            let gutter_margin = settings_global
+                .get_f32(vec!["ui", "editor", "gutter", "margin_px"])
+                .unwrap_or(8.0);
+            let padding_left = settings_global
+                .get_f32(vec!["ui", "editor", "padding_left_px"])
+                .unwrap_or(16.0);
             let total_offset = gutter_width + gutter_margin + padding_left;
-            let monospace_char_width = settings_global.get_f32(vec!["ui", "editor", "monospace_char_width_px"]).unwrap_or(8.0);
-            let tab_bar_height = settings_global.get_f32(vec!["ui", "panels", "tab_bar", "height_px"]).unwrap_or(40.0);
-            let menu_bar_height = settings_global.get_f32(vec!["ui", "panels", "menu_bar", "height_px"]).unwrap_or(30.0);
-            let scrollbar_width = settings_global.get_f32(vec!["ui", "editor", "scrollbar", "width_px"]).unwrap_or(14.0);
-            let explorer_width = settings_global.get_f32(vec!["ui", "panels", "explorer", "width_px"]).unwrap_or(240.0);
-            let status_bar_height = settings_global.get_f32(vec!["ui", "panels", "status_bar", "height_px"]).unwrap_or(60.0);
+            let monospace_char_width = settings_global
+                .get_f32(vec!["ui", "editor", "monospace_char_width_px"])
+                .unwrap_or(8.0);
+            let tab_bar_height = settings_global
+                .get_f32(vec!["ui", "panels", "tab_bar", "height_px"])
+                .unwrap_or(40.0);
+            let menu_bar_height = settings_global
+                .get_f32(vec!["ui", "panels", "menu_bar", "height_px"])
+                .unwrap_or(30.0);
+            let scrollbar_width = settings_global
+                .get_f32(vec!["ui", "editor", "scrollbar", "width_px"])
+                .unwrap_or(14.0);
+            let explorer_width = settings_global
+                .get_f32(vec!["ui", "panels", "explorer", "width_px"])
+                .unwrap_or(240.0);
+            let status_bar_height = settings_global
+                .get_f32(vec!["ui", "panels", "status_bar", "height_px"])
+                .unwrap_or(60.0);
 
             let x: f32 = event.position.x.into();
             let y: f32 = event.position.y.into();
@@ -442,7 +469,11 @@ impl Render for EditorWindow {
                 return;
             }
 
-            let editor_x = if this.explorer_open { x - explorer_width } else { x };
+            let editor_x = if this.explorer_open {
+                x - explorer_width
+            } else {
+                x
+            };
 
             let window_width = 800.0;
             let active_tab = &mut this.tabs[this.active_tab_index];
@@ -462,15 +493,18 @@ impl Render for EditorWindow {
             let top_padding: f32 = padding_left + tab_bar_height + padding_left;
             let adjusted_y = y + buffer.scroll_y - top_padding;
             let line_index = (adjusted_y / line_height).max(1.0) as usize;
-            let approximate_col = ((editor_x - total_offset) / monospace_char_width).round() as usize;
+            let approximate_col =
+                ((editor_x - total_offset) / monospace_char_width).round() as usize;
             buffer.set_cursor_from_position(line_index, approximate_col);
             cx.notify();
         });
 
         let on_scroll = cx.listener(|this, event: &ScrollWheelEvent, _window, cx| {
             let settings_global = cx.global::<SettingsGlobal>().clone();
-            let line_height = settings_global.get_f32(vec!["ui", "editor", "line_height_px"]).unwrap_or(19.2);
-            
+            let line_height = settings_global
+                .get_f32(vec!["ui", "editor", "line_height_px"])
+                .unwrap_or(19.2);
+
             let active_tab = &mut this.tabs[this.active_tab_index];
             let buffer = &mut active_tab.buffer;
             let delta_y: f32 = event.delta.pixel_delta(px(1.0)).y.into();
@@ -504,13 +538,31 @@ impl Render for EditorWindow {
         });
 
         let settings_global = cx.global::<SettingsGlobal>().clone();
-        let file_dropdown = menu_bar::bar_element::render_file_dropdown(on_new_file, on_open_file, on_save_file, settings_global.clone());
-        let settings_dropdown = menu_bar::bar_element::render_setting_dropdown(on_open_settings, settings_global.clone());
+        let file_dropdown = menu_bar::bar_element::render_file_dropdown(
+            on_new_file,
+            on_open_file,
+            on_save_file,
+            settings_global.clone(),
+        );
+        let settings_dropdown = menu_bar::bar_element::render_setting_dropdown(
+            on_open_settings,
+            settings_global.clone(),
+        );
 
         let focus_handle = self.tabs[self.active_tab_index].focus_handle.clone();
 
-        let tabs_info: Vec<(usize, String, bool, bool)> = self.tabs.iter().enumerate()
-            .map(|(i, tab)| (i, tab.title.clone(), i == self.active_tab_index, tab.is_modified))
+        let tabs_info: Vec<(usize, String, bool, bool)> = self
+            .tabs
+            .iter()
+            .enumerate()
+            .map(|(i, tab)| {
+                (
+                    i,
+                    tab.title.clone(),
+                    i == self.active_tab_index,
+                    tab.is_modified,
+                )
+            })
             .collect();
 
         let active_tab = &mut self.tabs[self.active_tab_index];
@@ -527,21 +579,35 @@ impl Render for EditorWindow {
             buffer.scroll_y,
             viewport_height - 60.0,
             settings_global,
-        ).with_file_extension(buffer.get_file_extension());
+        )
+        .with_file_extension(buffer.get_file_extension());
 
         let tabs_bar = tab_bar::bar_element::render_bar(&tabs_info, cx);
         let menu_bar_element = self.menu_bar.render(self.menu_bar.file_menu_open, cx);
-        let file_tree_element = render_file_tree(&self.file_tree, self.pending_creation.as_ref(), cx);
+        let file_tree_element =
+            render_file_tree(&self.file_tree, self.pending_creation.as_ref(), cx);
         let search_results = search_in_files(&self.search_input_state.input, &self.root_dir);
         let search_element = render_search_files(&self.search_input_state, &search_results, cx);
 
         let settings_global_colors = cx.global::<SettingsGlobal>().clone();
-        let bg_color = settings_global_colors.get_color(vec!["ui", "colors", "background"]).unwrap_or(0x1e1e1e);
-        let toolbar_bg = settings_global_colors.get_color(vec!["ui", "panels", "toolbar", "background"]).unwrap_or(0x333333);
-        let toolbar_active_bg = settings_global_colors.get_color(vec!["ui", "panels", "toolbar", "button_active_background"]).unwrap_or(0x505050);
-        let toolbar_hover_bg = settings_global_colors.get_color(vec!["ui", "panels", "toolbar", "button_hover_background"]).unwrap_or(0x454545);
-        let toolbar_text = settings_global_colors.get_color(vec!["ui", "panels", "toolbar", "button_text"]).unwrap_or(0x858585);
-        let toolbar_active_text = settings_global_colors.get_color(vec!["ui", "panels", "toolbar", "button_active_text"]).unwrap_or(0xffffff);
+        let bg_color = settings_global_colors
+            .get_color(vec!["ui", "colors", "background"])
+            .unwrap_or(0x1e1e1e);
+        let toolbar_bg = settings_global_colors
+            .get_color(vec!["ui", "panels", "toolbar", "background"])
+            .unwrap_or(0x333333);
+        let toolbar_active_bg = settings_global_colors
+            .get_color(vec!["ui", "panels", "toolbar", "button_active_background"])
+            .unwrap_or(0x505050);
+        let toolbar_hover_bg = settings_global_colors
+            .get_color(vec!["ui", "panels", "toolbar", "button_hover_background"])
+            .unwrap_or(0x454545);
+        let toolbar_text = settings_global_colors
+            .get_color(vec!["ui", "panels", "toolbar", "button_text"])
+            .unwrap_or(0x858585);
+        let toolbar_active_text = settings_global_colors
+            .get_color(vec!["ui", "panels", "toolbar", "button_active_text"])
+            .unwrap_or(0xffffff);
 
         div()
             .size_full()
@@ -580,19 +646,28 @@ impl Render for EditorWindow {
                                     .justify_center()
                                     .rounded(px(6.0))
                                     .cursor_pointer()
-                                    .bg(if self.explorer_open { rgb(toolbar_active_bg) } else { rgb(toolbar_bg) })
+                                    .bg(if self.explorer_open {
+                                        rgb(toolbar_active_bg)
+                                    } else {
+                                        rgb(toolbar_bg)
+                                    })
                                     .hover(|s| s.bg(rgb(toolbar_hover_bg)))
                                     .on_mouse_down(MouseButton::Left, on_toggle_explorer)
                                     .child(
                                         div()
                                             .text_size(px(20.0))
-                                            .text_color(if self.explorer_open { rgb(toolbar_active_text) } else { rgb(toolbar_text) })
+                                            .text_color(if self.explorer_open {
+                                                rgb(toolbar_active_text)
+                                            } else {
+                                                rgb(toolbar_text)
+                                            })
                                             .child(
-                                                img(self.menu_icon.get("explorer")
+                                                img(self
+                                                    .menu_icon
+                                                    .get("explorer")
                                                     .unwrap()
-                                                    .clone()
-                                                )
-                                                .size(px(17.0))
+                                                    .clone())
+                                                .size(px(17.0)),
                                             ),
                                     ),
                             )
@@ -607,22 +682,27 @@ impl Render for EditorWindow {
                                     .justify_center()
                                     .rounded(px(6.0))
                                     .cursor_pointer()
-                                    .bg(if self.search_open { rgb(toolbar_active_bg) } else { rgb(toolbar_bg) })
+                                    .bg(if self.search_open {
+                                        rgb(toolbar_active_bg)
+                                    } else {
+                                        rgb(toolbar_bg)
+                                    })
                                     .hover(|s| s.bg(rgb(toolbar_hover_bg)))
                                     .on_mouse_down(MouseButton::Left, on_toggle_search)
                                     .child(
                                         div()
                                             .text_size(px(20.0))
-                                            .text_color(if self.search_open { rgb(toolbar_active_text) } else { rgb(toolbar_text) })
+                                            .text_color(if self.search_open {
+                                                rgb(toolbar_active_text)
+                                            } else {
+                                                rgb(toolbar_text)
+                                            })
                                             .child(
-                                                img(self.menu_icon.get("search")
-                                                    .unwrap()
-                                                    .clone()
-                                                )
-                                                .size(px(17.0))
+                                                img(self.menu_icon.get("search").unwrap().clone())
+                                                    .size(px(17.0)),
                                             ),
                                     ),
-                            )
+                            ),
                     )
                     .when(self.explorer_open, |el| el.child(file_tree_element))
                     .when(self.search_open, |el| el.child(search_element))
@@ -633,10 +713,12 @@ impl Render for EditorWindow {
                             .flex_col()
                             .min_h_0()
                             .child(tabs_bar)
-                            .child(div().flex_1().min_h_0().child(editor_element))
-                    )
+                            .child(div().flex_1().min_h_0().child(editor_element)),
+                    ),
             )
             .when(self.menu_bar.file_menu_open, |el| el.child(file_dropdown))
-            .when(self.menu_bar.setting_menu_open, |el| el.child(settings_dropdown))
+            .when(self.menu_bar.setting_menu_open, |el| {
+                el.child(settings_dropdown)
+            })
     }
 }

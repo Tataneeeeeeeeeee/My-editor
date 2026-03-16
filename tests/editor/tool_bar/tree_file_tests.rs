@@ -28,9 +28,7 @@ mod tests {
     #[test]
     fn test_tree_file_filter() {
         let entries = vec!["main.rs", "lib.rs", "test.txt"];
-        let filtered: Vec<_> = entries.iter()
-            .filter(|e| e.ends_with(".rs"))
-            .collect();
+        let filtered: Vec<_> = entries.iter().filter(|e| e.ends_with(".rs")).collect();
         assert_eq!(filtered.len(), 2);
     }
 

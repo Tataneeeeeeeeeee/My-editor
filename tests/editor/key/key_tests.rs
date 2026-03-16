@@ -20,7 +20,7 @@ mod tests {
             Delete,
             Navigate,
         }
-        
+
         let action = Action::Insert;
         match action {
             Action::Insert => assert_eq!(true, true),
@@ -42,7 +42,7 @@ mod tests {
             Processing,
             Complete,
         }
-        
+
         let state = KeyState::Processing;
         match state {
             KeyState::Processing => assert_eq!(true, true),

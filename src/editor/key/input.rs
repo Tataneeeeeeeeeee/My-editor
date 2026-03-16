@@ -1,7 +1,7 @@
-use gpui::{KeyDownEvent, Window};
 use crate::editor::editor_window::EditorWindow;
-use gpui::Context;
 use crate::settings::settings::SettingsGlobal;
+use gpui::Context;
+use gpui::{KeyDownEvent, Window};
 
 /// Handles regular character input and navigation keys.
 /// Returns true if the event was handled.
@@ -12,7 +12,9 @@ pub fn handle_input(
     cx: &mut Context<EditorWindow>,
 ) -> bool {
     let settings_global = cx.global::<SettingsGlobal>().clone();
-    let line_height = settings_global.get_f32(vec!["ui", "editor", "line_height_px"]).unwrap_or(19.2);
+    let line_height = settings_global
+        .get_f32(vec!["ui", "editor", "line_height_px"])
+        .unwrap_or(19.2);
 
     let active_tab = &mut this.tabs[this.active_tab_index];
     let buffer = &mut active_tab.buffer;
@@ -37,10 +39,10 @@ pub fn handle_input(
             buffer.auto_scroll_to_cursor(viewport_height, line_height);
         }
         "tab" => buffer.insert_tab(),
-        "left"  => buffer.move_left(),
+        "left" => buffer.move_left(),
         "right" => buffer.move_right(),
-        "up"    => buffer.move_up(),
-        "down"  => buffer.move_down(),
+        "up" => buffer.move_up(),
+        "down" => buffer.move_down(),
         _ => return false,
     }
 

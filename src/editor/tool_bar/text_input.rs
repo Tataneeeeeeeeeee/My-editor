@@ -1,6 +1,5 @@
 /// Generic text input management system for reusable input components
 /// Can be used for: file/folder creation, search, renaming, etc.
-
 use gpui::*;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -72,7 +71,7 @@ impl TextInputState {
 /// Render a generic text input box
 pub fn render_text_input_box(state: &TextInputState) -> impl IntoElement {
     let display = state.display_text();
-    
+
     div()
         .px(px(6.0))
         .py(px(2.0))
@@ -104,14 +103,14 @@ pub fn render_text_input_section(state: &TextInputState) -> impl IntoElement {
             div()
                 .text_size(px(10.0))
                 .text_color(rgb(0xffffff))
-                .child(label)
+                .child(label),
         )
         .child(render_text_input_box(state))
         .child(
             div()
                 .text_size(px(10.0))
                 .text_color(rgb(0xffffff))
-                .child(hint)
+                .child(hint),
         )
         .mb_1()
 }

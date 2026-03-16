@@ -1,6 +1,6 @@
-use syntect::highlighting::{ThemeSet, Style, Theme};
-use syntect::parsing::{SyntaxSet, SyntaxReference};
 use syntect::easy::HighlightLines;
+use syntect::highlighting::{Style, Theme, ThemeSet};
+use syntect::parsing::{SyntaxReference, SyntaxSet};
 
 pub struct SyntaxHighlighter {
     syntax_set: SyntaxSet,
@@ -12,20 +12,22 @@ impl SyntaxHighlighter {
         let syntax_set = SyntaxSet::load_defaults_newlines();
         let theme_set = ThemeSet::load_defaults();
         let theme = theme_set.themes["base16-ocean.dark"].clone();
-        
-        Self {
-            syntax_set,
-            theme,
-        }
+
+        Self { syntax_set, theme }
     }
-    
+
     pub fn get_syntax(&self, extension: &str) -> &SyntaxReference {
         self.syntax_set
             .find_syntax_by_extension(extension)
             .unwrap_or_else(|| self.syntax_set.find_syntax_plain_text())
     }
-    
-    pub fn highlight_line(&self, line: &str, _syntax: &SyntaxReference, highlighter: &mut HighlightLines) -> Vec<(Style, String)> {
+
+    pub fn highlight_line(
+        &self,
+        line: &str,
+        _syntax: &SyntaxReference,
+        highlighter: &mut HighlightLines,
+    ) -> Vec<(Style, String)> {
         // highlight_line already returns colorized segments
         // Just need to pass the line and the syntax_set
         match highlighter.highlight_line(line, &self.syntax_set) {
@@ -39,7 +41,7 @@ impl SyntaxHighlighter {
             }
         }
     }
-    
+
     pub fn create_highlighter<'a>(&'a self, syntax: &SyntaxReference) -> HighlightLines<'a> {
         HighlightLines::new(syntax, &self.theme)
     }
