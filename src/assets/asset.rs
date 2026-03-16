@@ -1,6 +1,6 @@
-use std::path::PathBuf;
-use std::borrow::Cow;
 use gpui::*;
+use std::borrow::Cow;
+use std::path::PathBuf;
 
 pub struct Assets {
     pub base: PathBuf,
@@ -20,7 +20,8 @@ impl AssetSource for Assets {
             .map(|entries| {
                 entries
                     .filter_map(|entry| {
-                        entry.ok()
+                        entry
+                            .ok()
                             .and_then(|e| e.file_name().into_string().ok())
                             .map(SharedString::from)
                     })

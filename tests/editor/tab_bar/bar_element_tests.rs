@@ -55,11 +55,11 @@ mod tests {
     fn test_tab_bar_close_active_tab() {
         let mut active_tab = 1;
         let tab_count = 3;
-        
+
         if active_tab >= tab_count - 1 {
             active_tab = tab_count - 2;
         }
-        
+
         assert!(active_tab >= 0);
     }
 

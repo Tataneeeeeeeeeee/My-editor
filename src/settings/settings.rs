@@ -1,8 +1,8 @@
-use std::fs;
-use std::path::PathBuf;
-use serde_json;
 use gpui::Global;
 use json_comments::StripComments;
+use serde_json;
+use std::fs;
+use std::path::PathBuf;
 
 /// Global settings accessible throughout the app via GPUI's global system
 #[derive(Clone)]
@@ -14,7 +14,7 @@ impl SettingsGlobal {
     pub fn new(settings: serde_json::Value) -> Self {
         Self { settings }
     }
-    
+
     pub fn get(&self, path: Vec<&str>) -> Result<String, String> {
         let mut current_value = self.settings.clone();
         for key in path {
@@ -36,7 +36,8 @@ impl SettingsGlobal {
                 return Err(format!("Setting '{}' not found", key));
             }
         }
-        current_value.as_f64()
+        current_value
+            .as_f64()
             .ok_or_else(|| format!("Setting is not a number"))
             .map(|v| v as f32)
     }
@@ -51,11 +52,10 @@ impl SettingsGlobal {
 
 impl Global for SettingsGlobal {}
 
-pub fn load_settings() -> Result<SettingsGlobal, String>
-{
+pub fn load_settings() -> Result<SettingsGlobal, String> {
     // Resolve home directory manually (~/ is not expanded by Rust)
-    let home = std::env::var("HOME")
-        .map_err(|_| "HOME environment variable not set".to_string())?;
+    let home =
+        std::env::var("HOME").map_err(|_| "HOME environment variable not set".to_string())?;
 
     let settings_path = PathBuf::from(home).join(".my-editor").join("settings.json");
 

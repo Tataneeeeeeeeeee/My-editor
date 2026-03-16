@@ -1,10 +1,10 @@
-use gpui::*;
-use gpui::prelude::FluentBuilder;
-use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use super::text_input::{TextInputState, TextInputType, render_text_input_section};
 use crate::editor::editor_window::{EditorWindow, PendingCreation, PendingCreationKind};
 use crate::settings::settings::SettingsGlobal;
-use super::text_input::{TextInputState, TextInputType, render_text_input_section};
+use gpui::prelude::FluentBuilder;
+use gpui::*;
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 #[derive(Clone, Debug)]
 pub struct FileNode {
@@ -108,17 +108,19 @@ impl FileTree {
 
         let settings_global = _cx.global::<SettingsGlobal>();
         let assets_dir = PathBuf::from(
-            settings_global.get(vec!["assets", "path"])
-                .expect("Failed to get assets path setting")
+            settings_global
+                .get(vec!["assets", "path"])
+                .expect("Failed to get assets path setting"),
         );
         let icon = |name: &str| -> Arc<Path> { Arc::from(assets_dir.join(name).as_path()) };
 
-        let mut file_icons: std::collections::HashMap<String, Arc<Path>> = std::collections::HashMap::new();
-        
+        let mut file_icons: std::collections::HashMap<String, Arc<Path>> =
+            std::collections::HashMap::new();
+
         match settings_global.get(vec!["file_extensions"]) {
             Ok(exts_json) => {
                 let exts: serde_json::Value = serde_json::from_str(&exts_json).unwrap_or_default();
-                
+
                 if let Some(ext_map) = exts.as_object() {
                     for (ext, info) in ext_map {
                         if let Some(icon_name) = info.get("icon").and_then(|v| v.as_str()) {
@@ -130,11 +132,33 @@ impl FileTree {
             Err(_) => {} // If the setting is missing or invalid, just leave file_icons empty
         }
 
-        let mut explorer_icon: std::collections::HashMap<String, Arc<Path>> = std::collections::HashMap::new();
-        explorer_icon.insert("new_document".to_string(), icon(settings_global.get(vec!["icons", "explorer_icons", "new_document"]).unwrap_or_else(|_| "".to_string()).as_str()));
-        explorer_icon.insert("new_folder".to_string(), icon(settings_global.get(vec!["icons", "explorer_icons", "new_folder"]).unwrap_or_else(|_| "".to_string()).as_str()));
+        let mut explorer_icon: std::collections::HashMap<String, Arc<Path>> =
+            std::collections::HashMap::new();
+        explorer_icon.insert(
+            "new_document".to_string(),
+            icon(
+                settings_global
+                    .get(vec!["icons", "explorer_icons", "new_document"])
+                    .unwrap_or_else(|_| "".to_string())
+                    .as_str(),
+            ),
+        );
+        explorer_icon.insert(
+            "new_folder".to_string(),
+            icon(
+                settings_global
+                    .get(vec!["icons", "explorer_icons", "new_folder"])
+                    .unwrap_or_else(|_| "".to_string())
+                    .as_str(),
+            ),
+        );
 
-        let dir_icon: Arc<Path> = icon(settings_global.get(vec!["icons", "default", "directory"]).unwrap_or_else(|_| "".to_string()).as_str());
+        let dir_icon: Arc<Path> = icon(
+            settings_global
+                .get(vec!["icons", "default", "directory"])
+                .unwrap_or_else(|_| "".to_string())
+                .as_str(),
+        );
 
         Self {
             root: Some(root),
@@ -192,14 +216,26 @@ pub fn render_file_tree(
     cx: &mut Context<EditorWindow>,
 ) -> impl IntoElement + use<> {
     let settings_global = cx.global::<SettingsGlobal>().clone();
-    
-    let explorer_bg = settings_global.get_color(vec!["ui", "panels", "explorer", "background"]).unwrap_or(0x252526);
-    let explorer_border = settings_global.get_color(vec!["ui", "panels", "explorer", "border_color"]).unwrap_or(0x1e1e1e);
-    let explorer_text = settings_global.get_color(vec!["ui", "panels", "explorer", "text_color"]).unwrap_or(0xbbbbbb);
-    let explorer_header_text = settings_global.get_color(vec!["ui", "panels", "explorer", "header_text_color"]).unwrap_or(0x888888);
-    let explorer_hover_bg = settings_global.get_color(vec!["ui", "panels", "explorer", "hover_background"]).unwrap_or(0x2a2d2e);
-    let text_primary = settings_global.get_color(vec!["ui", "colors", "text_primary"]).unwrap_or(0xffffff);
-    
+
+    let explorer_bg = settings_global
+        .get_color(vec!["ui", "panels", "explorer", "background"])
+        .unwrap_or(0x252526);
+    let explorer_border = settings_global
+        .get_color(vec!["ui", "panels", "explorer", "border_color"])
+        .unwrap_or(0x1e1e1e);
+    let explorer_text = settings_global
+        .get_color(vec!["ui", "panels", "explorer", "text_color"])
+        .unwrap_or(0xbbbbbb);
+    let explorer_header_text = settings_global
+        .get_color(vec!["ui", "panels", "explorer", "header_text_color"])
+        .unwrap_or(0x888888);
+    let explorer_hover_bg = settings_global
+        .get_color(vec!["ui", "panels", "explorer", "hover_background"])
+        .unwrap_or(0x2a2d2e);
+    let text_primary = settings_global
+        .get_color(vec!["ui", "colors", "text_primary"])
+        .unwrap_or(0xffffff);
+
     let flat = file_tree.flatten();
     let root_name = file_tree
         .root_path
@@ -247,7 +283,7 @@ pub fn render_file_tree(
                             div()
                                 .text_size(px(14.0))
                                 .text_color(rgb(explorer_header_text))
-                                .child(root_name)
+                                .child(root_name),
                         )
                         .child(
                             div()
@@ -255,18 +291,22 @@ pub fn render_file_tree(
                                 .items_center()
                                 .gap(px(4.0))
                                 .child(
-                                    img(file_tree.explorer_icon.get("new_document").unwrap().clone())
-                                        .size(px(16.0))
-                                        .id("new-file-btn")
-                                        .cursor_pointer()
-                                        .rounded(px(4.0))
-                                        .hover(|s| s.bg(rgb(explorer_hover_bg)))
-                                        .on_mouse_down(
-                                            MouseButton::Left,
-                                            cx.listener(|this, _: &MouseDownEvent, _window, cx| {
-                                                this.start_create_file(cx);
-                                            }),
-                                        )
+                                    img(file_tree
+                                        .explorer_icon
+                                        .get("new_document")
+                                        .unwrap()
+                                        .clone())
+                                    .size(px(16.0))
+                                    .id("new-file-btn")
+                                    .cursor_pointer()
+                                    .rounded(px(4.0))
+                                    .hover(|s| s.bg(rgb(explorer_hover_bg)))
+                                    .on_mouse_down(
+                                        MouseButton::Left,
+                                        cx.listener(|this, _: &MouseDownEvent, _window, cx| {
+                                            this.start_create_file(cx);
+                                        }),
+                                    ),
                                 )
                                 .child(
                                     img(file_tree.explorer_icon.get("new_folder").unwrap().clone())
@@ -280,10 +320,10 @@ pub fn render_file_tree(
                                             cx.listener(|this, _: &MouseDownEvent, _window, cx| {
                                                 this.start_create_folder(cx);
                                             }),
-                                        )
-                                )
-                        )
-                )
+                                        ),
+                                ),
+                        ),
+                ),
         )
         .child(
             div()
@@ -302,17 +342,31 @@ pub fn render_file_tree(
                     let indent = node.depth as f32 * 12.0 + 8.0;
                     let ext = node.name.rsplit('.').next().unwrap_or("").to_string();
 
-                    let text_color = if node.is_dir { rgb(explorer_text) } else { rgb(text_primary) };
+                    let text_color = if node.is_dir {
+                        rgb(explorer_text)
+                    } else {
+                        rgb(text_primary)
+                    };
 
                     let arrow_el: Option<AnyElement> = if node.is_dir {
                         let arrow = if node.is_expanded { "▾" } else { "▸" };
-                        Some(div().text_size(px(13.0)).text_color(rgb(explorer_header_text)).child(arrow).into_any_element())
+                        Some(
+                            div()
+                                .text_size(px(13.0))
+                                .text_color(rgb(explorer_header_text))
+                                .child(arrow)
+                                .into_any_element(),
+                        )
                     } else {
                         None
                     };
 
                     let icon_el: Option<AnyElement> = if node.is_dir {
-                        Some(img(file_tree.dir_icon.clone()).size(px(14.0)).into_any_element())
+                        Some(
+                            img(file_tree.dir_icon.clone())
+                                .size(px(14.0))
+                                .into_any_element(),
+                        )
                     } else if let Some(asset) = file_tree.file_icons.get(&ext).cloned() {
                         Some(img(asset).size(px(14.0)).into_any_element())
                     } else {
@@ -331,8 +385,16 @@ pub fn render_file_tree(
                         .cursor_pointer()
                         .hover(|s| s.bg(rgb(explorer_hover_bg)));
 
-                    let row = if let Some(a) = arrow_el { row.child(a) } else { row };
-                    let row = if let Some(i) = icon_el  { row.child(i) } else { row };
+                    let row = if let Some(a) = arrow_el {
+                        row.child(a)
+                    } else {
+                        row
+                    };
+                    let row = if let Some(i) = icon_el {
+                        row.child(i)
+                    } else {
+                        row
+                    };
 
                     let row = row.child(
                         div()

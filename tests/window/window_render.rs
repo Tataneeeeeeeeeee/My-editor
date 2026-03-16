@@ -9,9 +9,7 @@ mod tests {
 
     impl MockAppState {
         fn new() -> Self {
-            Self {
-                next_id: 0,
-            }
+            Self { next_id: 0 }
         }
 
         fn create_window_id(&mut self) -> usize {
@@ -35,7 +33,7 @@ mod tests {
     fn test_app_state_create_window_id() {
         let mut app_state = MockAppState::new();
         let id1 = app_state.create_window_id();
-        
+
         assert_eq!(id1, 0);
         assert_eq!(app_state.next_id, 1);
     }
@@ -43,11 +41,11 @@ mod tests {
     #[test]
     fn test_app_state_multiple_window_ids() {
         let mut app_state = MockAppState::new();
-        
+
         let id1 = app_state.create_window_id();
         let id2 = app_state.create_window_id();
         let id3 = app_state.create_window_id();
-        
+
         assert_eq!(id1, 0);
         assert_eq!(id2, 1);
         assert_eq!(id3, 2);
@@ -57,14 +55,12 @@ mod tests {
     #[test]
     fn test_app_state_id_uniqueness() {
         let mut app_state = MockAppState::new();
-        
-        let ids: Vec<usize> = (0..10)
-            .map(|_| app_state.create_window_id())
-            .collect();
-        
+
+        let ids: Vec<usize> = (0..10).map(|_| app_state.create_window_id()).collect();
+
         // Check all IDs are unique
         for i in 0..ids.len() {
-            for j in (i+1)..ids.len() {
+            for j in (i + 1)..ids.len() {
                 assert_ne!(ids[i], ids[j]);
             }
         }
@@ -73,7 +69,7 @@ mod tests {
     #[test]
     fn test_app_state_sequential_ids() {
         let mut app_state = MockAppState::new();
-        
+
         for i in 0..5 {
             let id = app_state.create_window_id();
             assert_eq!(id, i);
@@ -108,7 +104,7 @@ mod tests {
     fn test_window_options_combination() {
         let name = "Editor Window".to_string();
         let root_dir = PathBuf::from(".");
-        
+
         assert_eq!(name, "Editor Window");
         assert_eq!(root_dir.to_string_lossy(), ".");
     }
@@ -116,11 +112,11 @@ mod tests {
     #[test]
     fn test_app_state_large_number_of_windows() {
         let mut app_state = MockAppState::new();
-        
+
         for _ in 0..1000 {
             app_state.create_window_id();
         }
-        
+
         assert_eq!(app_state.get_next_id(), 1000);
     }
 
@@ -128,7 +124,7 @@ mod tests {
     fn test_window_root_dir_with_trailing_slash() {
         let root_dir1 = std::path::PathBuf::from("/home/user/projects");
         let _root_dir2 = std::path::PathBuf::from("/home/user/projects/");
-        
+
         // Paths should normalize
         assert_eq!(root_dir1.to_string_lossy(), "/home/user/projects");
     }
@@ -136,7 +132,10 @@ mod tests {
     #[test]
     fn test_window_root_dir_special_characters() {
         let root_dir = PathBuf::from("/home/user/my-projects_2024");
-        assert_eq!(root_dir.file_name().and_then(|n| n.to_str()), Some("my-projects_2024"));
+        assert_eq!(
+            root_dir.file_name().and_then(|n| n.to_str()),
+            Some("my-projects_2024")
+        );
     }
 
     #[test]
@@ -151,15 +150,15 @@ mod tests {
     #[test]
     fn test_app_state_id_counter_preservation() {
         let mut app_state = MockAppState::new();
-        
+
         app_state.create_window_id();
         app_state.create_window_id();
-        
+
         let saved_next_id = app_state.get_next_id();
-        
+
         // Create more windows
         app_state.create_window_id();
-        
+
         assert_eq!(app_state.get_next_id(), saved_next_id + 1);
     }
 
@@ -190,9 +189,12 @@ mod tests {
     #[test]
     fn test_root_dir_parent_access() {
         let root_dir = PathBuf::from("/home/user/projects/myproject");
-        
+
         assert_eq!(
-            root_dir.parent().and_then(|p| p.file_name()).and_then(|n| n.to_str()),
+            root_dir
+                .parent()
+                .and_then(|p| p.file_name())
+                .and_then(|n| n.to_str()),
             Some("projects")
         );
     }
@@ -200,7 +202,7 @@ mod tests {
     #[test]
     fn test_root_dir_file_name() {
         let root_dir = PathBuf::from("/home/user/projects");
-        
+
         assert_eq!(
             root_dir.file_name().and_then(|n| n.to_str()),
             Some("projects")
@@ -210,9 +212,9 @@ mod tests {
     #[test]
     fn test_app_state_incremental_ids_order() {
         let mut app_state = MockAppState::new();
-        
+
         let mut prev_id = app_state.create_window_id();
-        
+
         for _ in 0..100 {
             let current_id = app_state.create_window_id();
             assert_eq!(current_id, prev_id + 1);
@@ -224,12 +226,12 @@ mod tests {
     fn test_window_parameters_independence() {
         let name1 = "Window 1".to_string();
         let name2 = "Window 2".to_string();
-        
+
         assert_ne!(name1, name2);
-        
+
         let root_dir1 = PathBuf::from("/path1");
         let root_dir2 = PathBuf::from("/path2");
-        
+
         assert_ne!(root_dir1, root_dir2);
     }
 
@@ -237,7 +239,7 @@ mod tests {
     fn test_window_root_dir_components() {
         let root_dir = PathBuf::from("/home/user/documents/project");
         let components: Vec<_> = root_dir.components().collect();
-        
+
         assert!(components.len() > 0);
     }
 

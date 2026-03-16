@@ -1,6 +1,6 @@
-use gpui::KeyDownEvent;
 use crate::editor::editor_window::EditorWindow;
 use gpui::Context;
+use gpui::KeyDownEvent;
 
 /// Returns true if the event was a Ctrl shortcut and was handled
 pub fn handle_ctrl(

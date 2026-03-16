@@ -40,7 +40,7 @@ mod tests {
             Open,
             Save,
         }
-        
+
         let selected = MenuItem::Save;
         match selected {
             MenuItem::Save => assert_eq!(true, true),
@@ -77,7 +77,7 @@ mod tests {
             FileOpen,
             FileSave,
         }
-        
+
         let action = Action::FileNew;
         assert!(matches!(action, Action::FileNew));
     }

@@ -69,12 +69,12 @@ mod tests {
             input: String,
             cursor_pos: usize,
         }
-        
+
         let state = TextInputState {
             input: "test".to_string(),
             cursor_pos: 0,
         };
-        
+
         assert_eq!(state.input, "test");
         assert_eq!(state.cursor_pos, 0);
     }

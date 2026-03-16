@@ -40,9 +40,7 @@ mod tests {
     #[test]
     fn test_search_files_filter() {
         let files = vec!["main.rs", "config.json", "test.py"];
-        let filtered: Vec<_> = files.iter()
-            .filter(|f| f.contains("main"))
-            .collect();
+        let filtered: Vec<_> = files.iter().filter(|f| f.contains("main")).collect();
         assert_eq!(filtered.len(), 1);
     }
 
