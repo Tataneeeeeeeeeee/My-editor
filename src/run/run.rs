@@ -1,19 +1,13 @@
 use crate::assets::asset::Assets;
-use crate::settings::settings::load_settings;
 use crate::settings::settings::SettingsGlobal;
+use crate::settings::settings::load_settings;
 use crate::window::window_render::AppState;
+use fork::{Fork, daemon};
 use gpui::*;
 use std::env;
 use std::path::PathBuf;
-use fork::{daemon, Fork};
 
-
-fn run_app(
-    settings_global: SettingsGlobal,
-    assets_dir: PathBuf,
-    root_dir: PathBuf,
-)
-{
+fn run_app(settings_global: SettingsGlobal, assets_dir: PathBuf, root_dir: PathBuf) {
     Application::new()
         .with_assets(Assets { base: assets_dir })
         .run(move |cx: &mut App| {
@@ -30,10 +24,7 @@ fn run_app(
         });
 }
 
-pub fn run_editor(
-    path: Option<String>
-)
-{
+pub fn run_editor(path: Option<String>) {
     let settings_global = load_settings().expect("Failed to load settings");
     let assets_dir = PathBuf::from(
         settings_global

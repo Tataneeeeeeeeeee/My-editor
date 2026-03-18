@@ -2,13 +2,15 @@ use gpui::*;
 use std::borrow::Cow;
 use std::path::PathBuf;
 
+use crate::editor::log::log_info;
+
 pub struct Assets {
     pub base: PathBuf,
 }
 
 impl AssetSource for Assets {
     fn load(&self, path: &str) -> anyhow::Result<Option<Cow<'static, [u8]>>> {
-        println!("Loading asset: {}", self.base.join(path).display());
+        log_info(format!("Loading asset: {}", path).as_str());
 
         std::fs::read(self.base.join(path))
             .map(|data| Some(Cow::Owned(data)))

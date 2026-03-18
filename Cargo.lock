@@ -3811,6 +3811,7 @@ dependencies = [
  "gpui 0.2.2 (git+https://github.com/zed-industries/zed)",
  "gpui-component",
  "json_comments",
+ "lazy_static",
  "rfd",
  "serde",
  "serde_json",
