@@ -6,6 +6,9 @@ use super::text_buffer::TextBuffer;
 use super::tool_bar::search_file::{render_search_files, search_in_files};
 use super::tool_bar::text_input::{TextInputState, TextInputType};
 use super::tool_bar::tree_file::{FileTree, render_file_tree};
+use crate::editor::log::log_error;
+use crate::editor::log::log_info;
+use crate::editor::log::log_warning;
 use crate::settings::settings::{SettingsGlobal, load_settings};
 use gpui::prelude::FluentBuilder;
 use gpui::*;
@@ -136,6 +139,7 @@ impl EditorWindow {
             MenuAction::OpenFolder => self.open_directory(cx),
             MenuAction::SaveFile => self.save_current_file(cx),
             MenuAction::OpenSettings => self.open_settings(cx),
+            MenuAction::OpenLog => self.open_log(cx),
         }
     }
 
@@ -165,7 +169,7 @@ impl EditorWindow {
                     cx.notify();
                 }
                 Err(e) => {
-                    eprintln!("Error reading file: {}", e);
+                    log_error(format!("Error reading file: {}", e).as_str());
                 }
             }
         }
@@ -201,10 +205,10 @@ impl EditorWindow {
         if let Some(file_path) = &active_tab.buffer.file_path {
             match std::fs::write(file_path, &active_tab.buffer.text) {
                 Ok(_) => {
-                    println!("File saved: {:?}", file_path);
+                    log_info(format!("File saved: {:?}", file_path).as_str());
                 }
                 Err(e) => {
-                    eprintln!("Error saving file: {}", e);
+                    log_error(format!("Error saving file: {}", e).as_str());
                 }
             }
         } else {
@@ -234,11 +238,11 @@ impl EditorWindow {
                     active_tab.buffer.file_path = Some(file_path.clone());
                     active_tab.title = file_name;
 
-                    println!("File saved as: {:?}", file_path);
+                    log_info(format!("File saved: {:?}", file_path).as_str());
                     cx.notify();
                 }
                 Err(e) => {
-                    eprintln!("Error saving file: {}", e);
+                    log_error(format!("Error saving file: {}", e).as_str());
                 }
             }
         }
@@ -253,13 +257,42 @@ impl EditorWindow {
                 if settings_path.exists() {
                     self.open_file_from_path(settings_path, cx);
                 } else {
-                    eprintln!(
-                        "Settings file not found at expected location: {:?}",
-                        settings_path
+                    log_error(
+                        format!(
+                            "Settings file not found at expected location: {:?}",
+                            settings_path
+                        )
+                        .as_str(),
                     );
                 }
             }
-            Err(e) => eprintln!("Error determining home directory: {}", e),
+            Err(e) => log_error(
+                format!("Failed to resolve home directory for settings file: {}", e).as_str(),
+            ),
+        }
+    }
+
+    /// Open Log file in the editor
+    fn open_log(&mut self, cx: &mut Context<Self>) {
+        match std::env::var("HOME").map(|home| {
+            PathBuf::from(home)
+                .join(".my-editor")
+                .join("logs")
+                .join("editor.log")
+        }) {
+            Ok(log_path) => {
+                if log_path.exists() {
+                    log_warning(format!("Opening log file: {:?}", log_path).as_str());
+                    self.open_file_from_path(log_path, cx);
+                } else {
+                    log_error(
+                        format!("Log file not found at expected location: {:?}", log_path).as_str(),
+                    );
+                }
+            }
+            Err(e) => {
+                log_error(format!("Failed to resolve home directory for log file: {}", e).as_str())
+            }
         }
     }
 
@@ -325,7 +358,7 @@ impl EditorWindow {
                 self.active_tab_index = self.tabs.len() - 1;
                 cx.notify();
             }
-            Err(e) => eprintln!("Error reading file: {}", e),
+            Err(e) => log_error(format!("Error reading file: {}", e).as_str()),
         }
     }
 
@@ -400,7 +433,7 @@ impl EditorWindow {
         match pc.kind {
             PendingCreationKind::File => {
                 if let Err(e) = std::fs::write(&target, "") {
-                    eprintln!("Error creating file: {}", e);
+                    log_error(format!("Error creating file: {}", e).as_str());
                 } else {
                     self.file_tree.refresh();
                     self.open_file_from_path(target, cx);
@@ -408,7 +441,7 @@ impl EditorWindow {
             }
             PendingCreationKind::Folder => {
                 if let Err(e) = std::fs::create_dir_all(&target) {
-                    eprintln!("Error creating folder: {}", e);
+                    log_error(format!("Error creating folder: {}", e).as_str());
                 } else {
                     self.file_tree.refresh();
                 }
@@ -447,19 +480,9 @@ impl Render for EditorWindow {
             let line_height = settings_global
                 .get_f32(vec!["ui", "editor", "line_height_px"])
                 .unwrap_or(19.2);
-            let gutter_width = settings_global
-                .get_f32(vec!["ui", "panels", "explorer", "width_px"])
-                .unwrap_or(50.0);
-            let gutter_margin = settings_global
-                .get_f32(vec!["ui", "editor", "gutter", "margin_px"])
-                .unwrap_or(8.0);
-            let padding_left = settings_global
-                .get_f32(vec!["ui", "editor", "padding_left_px"])
-                .unwrap_or(16.0);
-            let total_offset = gutter_width + gutter_margin + padding_left;
-            let monospace_char_width = settings_global
-                .get_f32(vec!["ui", "editor", "monospace_char_width_px"])
-                .unwrap_or(8.0);
+            let char_spacing = settings_global
+                .get_f32(vec!["ui", "editor", "char_spacing_px"])
+                .unwrap_or(0.0);
             let tab_bar_height = settings_global
                 .get_f32(vec!["ui", "panels", "tab_bar", "height_px"])
                 .unwrap_or(40.0);
@@ -475,6 +498,9 @@ impl Render for EditorWindow {
             let status_bar_height = settings_global
                 .get_f32(vec!["ui", "panels", "status_bar", "height_px"])
                 .unwrap_or(60.0);
+            let toolbar_width = settings_global
+                .get_f32(vec!["ui", "panels", "toolbar", "width_px"])
+                .unwrap_or(48.0);
 
             let x: f32 = event.position.x.into();
             let y: f32 = event.position.y.into();
@@ -489,9 +515,9 @@ impl Render for EditorWindow {
             }
 
             let editor_x = if this.explorer_open {
-                x - explorer_width
+                x - explorer_width - toolbar_width
             } else {
-                x
+                x - toolbar_width
             };
 
             let window_width = 800.0;
@@ -509,11 +535,24 @@ impl Render for EditorWindow {
                 return;
             }
 
-            let top_padding: f32 = padding_left + tab_bar_height + padding_left;
-            let adjusted_y = y + buffer.scroll_y - top_padding;
-            let line_index = (adjusted_y / line_height).max(1.0) as usize;
-            let approximate_col =
-                ((editor_x - total_offset) / monospace_char_width).round() as usize;
+            // Calculate line index from y position
+            let top_offset = menu_bar_height + tab_bar_height;
+            let adjusted_y = y + buffer.scroll_y - top_offset;
+            let line_index = (adjusted_y / line_height).max(0.0) as usize;
+
+            // Calculate column index from x position
+            // The text starts after: padding (16px) + gutter (50px) + margin (8px from mr_2)
+            let text_start_x = 16.0 + 50.0 + 8.0;
+            let adjusted_x = editor_x - text_start_x;
+
+            // Each character cell width with spacing (margin on both sides)
+            let char_cell_width = 8.0 + char_spacing;
+            let approximate_col = if adjusted_x > 0.0 {
+                ((adjusted_x + char_spacing / 2.0) / char_cell_width) as usize
+            } else {
+                0
+            };
+
             buffer.set_cursor_from_position(line_index, approximate_col);
             cx.notify();
         });
@@ -551,6 +590,10 @@ impl Render for EditorWindow {
             this.explorer_open = false;
         });
 
+        let on_open_log = cx.listener(|this, _: &MouseDownEvent, _window, cx| {
+            this.handle_menu_action(MenuAction::OpenLog, cx);
+        });
+
         let on_toggle_explorer = cx.listener(|this, _: &MouseDownEvent, _window, cx| {
             this.toggle_explorer(cx);
         });
@@ -569,6 +612,7 @@ impl Render for EditorWindow {
         );
         let settings_dropdown = menu_bar::bar_element::render_setting_dropdown(
             on_open_settings,
+            on_open_log,
             settings_global.clone(),
         );
 

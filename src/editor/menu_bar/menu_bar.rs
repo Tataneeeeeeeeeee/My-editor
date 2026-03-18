@@ -11,6 +11,7 @@ pub enum MenuAction {
 
     // Settings menu actions
     OpenSettings,
+    OpenLog,
 }
 
 pub struct MenuBar {

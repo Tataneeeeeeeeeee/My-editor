@@ -1,6 +1,7 @@
 pub mod editor_element;
 pub mod editor_window;
 pub mod key;
+pub mod log;
 pub mod menu_bar;
 pub mod syntax_highlighter;
 pub mod tab_bar;

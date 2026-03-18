@@ -1,5 +1,6 @@
 target/
 dist/
+.my-editor/
 
 create_release.sh
 my-editor_amd64-linux.zip

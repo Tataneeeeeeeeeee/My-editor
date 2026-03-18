@@ -187,7 +187,7 @@ impl EditorElement {
                                 vec![div().child(" ")]
                             } else {
                                 // Render each segment with its color
-                                // BUT we split each segment into individual characters for spacing
+                                // Each character has balanced spacing on both sides
                                 styled_segments
                                     .into_iter()
                                     .flat_map(|(style, text)| {
@@ -195,7 +195,7 @@ impl EditorElement {
                                         text.chars()
                                             .map(move |c| {
                                                 div()
-                                                    .pr(px(char_spacing))
+                                                    .mx(px(char_spacing / 2.0))
                                                     .text_color(color)
                                                     .child(c.to_string())
                                             })
@@ -256,7 +256,7 @@ impl EditorElement {
                     div().opacity(0.0).flex().flex_row().children(
                         text_on_line
                             .chars()
-                            .map(|c| div().pr(px(char_spacing)).child(c.to_string())),
+                            .map(|c| div().mx(px(char_spacing / 2.0)).child(c.to_string())),
                     ),
                 )
                 .child(

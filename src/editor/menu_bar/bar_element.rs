@@ -99,6 +99,7 @@ pub fn render_file_dropdown(
 /// Renders the settings dropdown menu overlay
 pub fn render_setting_dropdown(
     on_open_settings: impl Fn(&MouseDownEvent, &mut Window, &mut App) + 'static,
+    on_open_log: impl Fn(&MouseDownEvent, &mut Window, &mut App) + 'static,
     settings_global: SettingsGlobal,
 ) -> impl IntoElement {
     div()
@@ -137,5 +138,21 @@ pub fn render_setting_dropdown(
                 })
                 .on_mouse_down(MouseButton::Left, on_open_settings)
                 .child("Open Settings"),
+        )
+        .child(
+            div()
+                .id("open-log-button")
+                .px_4()
+                .py_2()
+                .text_color(rgb(settings_global
+                    .get_color(vec!["ui", "dropdown", "text_color"])
+                    .unwrap_or(0xcccccc)))
+                .hover(|style| {
+                    style.bg(rgb(settings_global
+                        .get_color(vec!["ui", "dropdown", "hover_background"])
+                        .unwrap_or(0x094771)))
+                })
+                .on_mouse_down(MouseButton::Left, on_open_log)
+                .child("Open Logs"),
         )
 }
