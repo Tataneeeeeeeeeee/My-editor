@@ -1,5 +1,6 @@
 // Module aggregating all editor-related tests
 mod key;
+mod log;
 mod menu_bar;
 mod tab_bar;
 mod tool_bar;
