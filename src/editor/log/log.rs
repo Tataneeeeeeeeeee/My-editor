@@ -78,7 +78,8 @@ impl Default for LogManager {
 }
 
 pub fn load_log_file() -> Result<File, Box<dyn std::error::Error>> {
-    let log_path = PathBuf::from(".my-editor/logs/editor.log");
+    let log_path = std::env::var("HOME")
+        .map(|home| PathBuf::from(home).join(".my-editor").join("logs").join("editor.log"))?;
 
     // Create directory if it doesn't exist
     if let Some(parent) = log_path.parent() {
