@@ -12,7 +12,6 @@ use crate::editor::log::log_warning;
 use crate::settings::settings::{SettingsGlobal, load_settings};
 use gpui::prelude::FluentBuilder;
 use gpui::*;
-use std::fmt::format;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -275,26 +274,25 @@ impl EditorWindow {
 
     /// Open Log file in the editor
     fn open_log(&mut self, cx: &mut Context<Self>) {
-        match std::env::var("HOME")
-            .map(|home| PathBuf::from(home).join(".my-editor").join("logs").join("editor.log"))
-        {
+        match std::env::var("HOME").map(|home| {
+            PathBuf::from(home)
+                .join(".my-editor")
+                .join("logs")
+                .join("editor.log")
+        }) {
             Ok(log_path) => {
                 if log_path.exists() {
                     log_warning(format!("Opening log file: {:?}", log_path).as_str());
                     self.open_file_from_path(log_path, cx);
                 } else {
                     log_error(
-                        format!(
-                            "Log file not found at expected location: {:?}",
-                            log_path
-                        )
-                        .as_str(),
+                        format!("Log file not found at expected location: {:?}", log_path).as_str(),
                     );
                 }
             }
-            Err(e) => log_error(
-                format!("Failed to resolve home directory for log file: {}", e).as_str(),
-            ),
+            Err(e) => {
+                log_error(format!("Failed to resolve home directory for log file: {}", e).as_str())
+            }
         }
     }
 
